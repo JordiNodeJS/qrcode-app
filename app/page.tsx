@@ -1,6 +1,4 @@
 import QRGenerator from "@/components/QRGenerator";
-import ContactForm from "@/components/ContactForm";
-import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Home() {
   return (
@@ -8,7 +6,7 @@ export default function Home() {
       {/* Header */}
       <header className="w-full bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-center items-center">
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white text-center">
                 QR Code Generator
@@ -16,9 +14,6 @@ export default function Home() {
               <p className="text-center text-gray-600 dark:text-gray-300 mt-2">
                 Create QR codes instantly and get in touch with us
               </p>
-            </div>
-            <div className="absolute right-4 sm:right-8">
-              <ThemeToggle />
             </div>
           </div>
         </div>
@@ -45,7 +40,7 @@ export default function Home() {
               <div className="flex items-center justify-center gap-4">
                 <a
                   href="/contact"
-                  className="inline-block px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-gray-800"
+                  className="inline-block px-6 py-3 bg-sky-600 dark:bg-sky-500 text-white rounded-lg hover:bg-sky-700 dark:hover:bg-sky-600 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sky-500 dark:focus-visible:ring-sky-400 dark:focus-visible:ring-offset-gray-800"
                 >
                   Contact Us
                 </a>

@@ -11,36 +11,69 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const getStoredTheme = (): Theme | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = window.localStorage.getItem("theme");
+    if (stored === "light" || stored === "dark") {
+      return stored;
+    }
+  } catch {
+    // Ignore storage access issues (Safari private mode, etc.)
+  }
+  return null;
+};
+
+const getSystemTheme = (): Theme => {
+  if (typeof window === "undefined") return "light";
+  try {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  } catch {
+    return "light";
+  }
+};
+
+const applyTheme = (nextTheme: Theme) => {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.classList.toggle("dark", nextTheme === "dark");
+  root.style.colorScheme = nextTheme;
+  try {
+    window.localStorage.setItem("theme", nextTheme);
+  } catch {
+    // Ignore write failures
+  }
+};
+
+const readActiveTheme = (): Theme => {
+  if (typeof document === "undefined") return "light";
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+};
+
+const resolveInitialTheme = (): Theme => {
+  return getStoredTheme() ?? getSystemTheme();
+};
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
+  // Use a deterministic initial theme for SSR (always "light") so the
+  // server-rendered markup matches the initial client render during
+  // hydration. After the component mounts we read the stored/system
+  // preference and update the theme, avoiding hydration mismatches.
+  const [theme, setTheme] = useState<Theme>(() => "light");
 
   useEffect(() => {
-    setMounted(true);
-    // Check localStorage and system preference on mount
-    const storedTheme = localStorage.getItem("theme") as Theme | null;
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches;
-
-    if (storedTheme) {
-      setTheme(storedTheme);
-    } else if (prefersDark) {
-      setTheme("dark");
-    }
+    // On mount, resolve the real initial theme (from localStorage or
+    // system preference) and apply it. This runs after hydration so
+    // React will update the UI without causing a hydration mismatch.
+    const resolved = resolveInitialTheme();
+    setTheme(resolved);
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
-
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    localStorage.setItem("theme", theme);
-  }, [theme, mounted]);
+    applyTheme(theme);
+  }, [theme]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
@@ -59,8 +92,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme() {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return context;
+  if (context !== undefined) return context;
+
+  const fallbackToggle = () => {
+    const nextTheme = readActiveTheme() === "light" ? "dark" : "light";
+    applyTheme(nextTheme);
+  };
+
+  return { theme: readActiveTheme(), toggleTheme: fallbackToggle };
 }

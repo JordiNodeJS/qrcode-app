@@ -15,8 +15,8 @@ export default function ContactPage() {
             Contact
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-300">
-            We'd love to hear from you — questions, feedback or partnership
-            inquiries are welcome.
+            We&rsquo;d love to hear from you — questions, feedback or
+            partnership inquiries are welcome.
           </p>
         </div>
 
@@ -25,7 +25,7 @@ export default function ContactPage() {
         <div className="mt-8 text-center">
           <Link
             href="/"
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-sm text-sky-600 dark:text-sky-400 hover:underline"
           >
             ← Back to Home
           </Link>

@@ -164,8 +164,10 @@ export default function ContactForm() {
             value={formData.name}
             onChange={handleChange}
             maxLength={100}
-            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
-              errors.name ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
+              errors.name
+                ? "border-red-500"
+                : "border-gray-300 dark:border-gray-600"
             }`}
             aria-label="Your name"
             aria-required="true"
@@ -173,7 +175,10 @@ export default function ContactForm() {
             aria-describedby={errors.name ? "name-error" : undefined}
           />
           {errors.name && (
-            <p id="name-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
+            <p
+              id="name-error"
+              className="mt-1 text-sm text-red-600 dark:text-red-400"
+            >
               {errors.name}
             </p>
           )}
@@ -193,8 +198,10 @@ export default function ContactForm() {
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
-              errors.email ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
+              errors.email
+                ? "border-red-500"
+                : "border-gray-300 dark:border-gray-600"
             }`}
             aria-label="Your email address"
             aria-required="true"
@@ -202,7 +209,10 @@ export default function ContactForm() {
             aria-describedby={errors.email ? "email-error" : undefined}
           />
           {errors.email && (
-            <p id="email-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
+            <p
+              id="email-error"
+              className="mt-1 text-sm text-red-600 dark:text-red-400"
+            >
               {errors.email}
             </p>
           )}
@@ -223,8 +233,10 @@ export default function ContactForm() {
             value={formData.subject}
             onChange={handleChange}
             maxLength={200}
-            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
-              errors.subject ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
+              errors.subject
+                ? "border-red-500"
+                : "border-gray-300 dark:border-gray-600"
             }`}
             aria-label="Email subject"
             aria-required="true"
@@ -232,7 +244,10 @@ export default function ContactForm() {
             aria-describedby={errors.subject ? "subject-error" : undefined}
           />
           {errors.subject && (
-            <p id="subject-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
+            <p
+              id="subject-error"
+              className="mt-1 text-sm text-red-600 dark:text-red-400"
+            >
               {errors.subject}
             </p>
           )}
@@ -253,8 +268,10 @@ export default function ContactForm() {
             value={formData.message}
             onChange={handleChange}
             maxLength={1000}
-            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
-              errors.message ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-none text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
+              errors.message
+                ? "border-red-500"
+                : "border-gray-300 dark:border-gray-600"
             }`}
             aria-label="Your message"
             aria-required="true"
@@ -265,7 +282,10 @@ export default function ContactForm() {
             <span>{formData.message.length} / 1000 characters</span>
           </div>
           {errors.message && (
-            <p id="message-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
+            <p
+              id="message-error"
+              className="mt-1 text-sm text-red-600 dark:text-red-400"
+            >
               {errors.message}
             </p>
           )}
@@ -275,7 +295,7 @@ export default function ContactForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          className="w-full px-6 py-3 bg-sky-600 dark:bg-sky-500 text-white font-semibold rounded-lg hover:bg-sky-700 dark:hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
         >
           {loading ? (
             <span className="flex items-center justify-center">
@@ -309,7 +329,9 @@ export default function ContactForm() {
           )}
         </button>
 
-        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">* Required fields</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+          * Required fields
+        </p>
       </form>
     </div>
   );

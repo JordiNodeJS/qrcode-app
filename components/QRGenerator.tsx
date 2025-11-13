@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import QRCode from "qrcode";
+import Image from "next/image";
 
 export default function QRGenerator() {
   const [text, setText] = useState("");
@@ -85,7 +86,7 @@ export default function QRGenerator() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Enter text, URL, or any content to generate QR code..."
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-none text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
             aria-label="Text input for QR code generation"
           />
           <div className="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -93,7 +94,7 @@ export default function QRGenerator() {
             {text && (
               <button
                 onClick={() => setText("")}
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+                className="text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 font-medium"
               >
                 Clear
               </button>
@@ -115,26 +116,46 @@ export default function QRGenerator() {
         <div className="flex flex-col items-center space-y-4">
           {loading && (
             <div className="flex items-center justify-center p-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 dark:border-sky-400"></div>
             </div>
           )}
 
           {qrCodeUrl && !loading && (
             <>
               <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-2 border-gray-200 dark:border-gray-600">
-                <img
+                <Image
                   src={qrCodeUrl}
                   alt="Generated QR Code"
+                  width={300}
+                  height={300}
+                  unoptimized
                   className="w-full max-w-[300px] h-auto"
                 />
               </div>
 
               <button
                 onClick={downloadQRCode}
-                className="w-full sm:w-auto px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors duration-200"
+                className="w-full sm:w-auto px-6 py-3 bg-sky-600 dark:bg-sky-500 text-white font-semibold rounded-lg hover:bg-sky-700 dark:hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors duration-200"
                 aria-label="Download QR code as PNG image"
               >
-                📥 Download QR Code
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="-ml-1 mr-3 h-5 w-5 inline-block"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden
+                >
+                  <path d="M3 14.5V17a1 1 0 001 1h12a1 1 0 001-1v-2.5a1 1 0 00-1-1H4a1 1 0 00-1 1z" />
+                  <path
+                    d="M7 9l3-3 3 3M10 6v8"
+                    stroke="white"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </svg>
+                Download QR Code
               </button>
             </>
           )}
