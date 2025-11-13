@@ -64,8 +64,8 @@ export default function QRGenerator() {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+    <div className="w-full max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+      <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-6 text-center">
         QR Code Generator
       </h2>
 
@@ -74,7 +74,7 @@ export default function QRGenerator() {
         <div>
           <label
             htmlFor="qr-text"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
           >
             Enter text or URL
           </label>
@@ -85,15 +85,15 @@ export default function QRGenerator() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Enter text, URL, or any content to generate QR code..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900"
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
             aria-label="Text input for QR code generation"
           />
-          <div className="flex justify-between mt-2 text-sm text-gray-500">
+          <div className="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
             <span>{text.length} / 2000 characters</span>
             {text && (
               <button
                 onClick={() => setText("")}
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
               >
                 Clear
               </button>
@@ -104,7 +104,7 @@ export default function QRGenerator() {
         {/* Error Message */}
         {error && (
           <div
-            className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"
+            className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400"
             role="alert"
           >
             {error}
@@ -115,13 +115,13 @@ export default function QRGenerator() {
         <div className="flex flex-col items-center space-y-4">
           {loading && (
             <div className="flex items-center justify-center p-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
             </div>
           )}
 
           {qrCodeUrl && !loading && (
             <>
-              <div className="p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-2 border-gray-200 dark:border-gray-600">
                 <img
                   src={qrCodeUrl}
                   alt="Generated QR Code"
@@ -131,7 +131,7 @@ export default function QRGenerator() {
 
               <button
                 onClick={downloadQRCode}
-                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+                className="w-full sm:w-auto px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors duration-200"
                 aria-label="Download QR code as PNG image"
               >
                 📥 Download QR Code
@@ -140,7 +140,7 @@ export default function QRGenerator() {
           )}
 
           {!qrCodeUrl && !loading && !error && (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-gray-400 dark:text-gray-500">
               <svg
                 className="mx-auto h-24 w-24 mb-4"
                 fill="none"

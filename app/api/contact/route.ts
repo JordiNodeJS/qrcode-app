@@ -10,6 +10,13 @@ interface ContactFormData {
   message: string;
 }
 
+// Minimal type for Resend send result to help with logging/returns
+interface ResendSendResult {
+  id?: string;
+  data?: { id?: string } | null;
+  [key: string]: unknown;
+}
+
 // Validation functions
 const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,27 +60,48 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body: ContactFormData = await request.json();
 
+    // Log incoming request (useful for debugging). Avoid logging secrets.
+    try {
+      console.log(
+        `[contact] Incoming request at ${new Date().toISOString()}:`,
+        JSON.stringify(body)
+      );
+    } catch {
+      console.log("[contact] Incoming request (non-serializable)", body);
+    }
+
     // Validate form data
     const validationError = validateFormData(body);
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    // Check if API key is configured
+    // Check if API key is configured (don't print the key itself)
     if (!process.env.RESEND_API_KEY) {
-      console.error("RESEND_API_KEY is not configured");
+      console.error("[contact] RESEND_API_KEY is not configured");
       return NextResponse.json(
         { error: "Email service is not configured" },
         { status: 500 }
       );
+    } else {
+      console.log("[contact] RESEND_API_KEY is configured: YES");
     }
 
-    // Send email using Resend
-    const { data, error } = await resend.emails.send({
-      from: "QR Code App <onboarding@resend.dev>",
-      to: ["info@webcode.es"],
-      subject: `Contact Form: ${body.subject}`,
-      html: `
+    // Send email using Resend. Wrap in try/catch and log full details for debugging.
+    let sendResult: ResendSendResult | null = null;
+    try {
+      // Allow overriding from/to via environment for testing/production
+      const mailFrom =
+        process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+      const mailTo = process.env.RESEND_TO_EMAIL
+        ? process.env.RESEND_TO_EMAIL.split(",").map((s) => s.trim())
+        : ["info@webcode.es"];
+
+      sendResult = await resend.emails.send({
+        from: mailFrom,
+        to: mailTo,
+        subject: `Contact Form: ${body.subject}`,
+        html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -102,8 +130,8 @@ export async function POST(request: NextRequest) {
                 <div class="field">
                   <div class="field-label">Email:</div>
                   <div class="field-value"><a href="mailto:${body.email}">${
-        body.email
-      }</a></div>
+          body.email
+        }</a></div>
                 </div>
                 <div class="field">
                   <div class="field-label">Subject:</div>
@@ -125,7 +153,7 @@ export async function POST(request: NextRequest) {
           </body>
         </html>
       `,
-      text: `
+        text: `
 New Contact Form Submission
 
 From: ${body.name}
@@ -139,12 +167,58 @@ ${body.message}
 Sent from QR Code Generator
 Timestamp: ${new Date().toLocaleString()}
       `.trim(),
-    });
+      });
+    } catch (sendErr) {
+      // Log full error object and return a generic error to the client
+      console.error(
+        "[contact] Resend API threw an error:",
+        sendErr instanceof Error ? sendErr.stack || sendErr.message : sendErr
+      );
+      try {
+        // If the error has a response/body, try to log it
+        console.error("[contact] Resend error (raw):", JSON.stringify(sendErr));
+      } catch {
+        // ignore
+      }
 
-    if (error) {
-      console.error("Resend API error:", error);
       return NextResponse.json(
         { error: "Failed to send email. Please try again later." },
+        { status: 500 }
+      );
+    }
+
+    // Log the send result for debugging; this often contains id / status
+    try {
+      console.log(
+        "[contact] Resend send result:",
+        JSON.stringify(sendResult, null, 2)
+      );
+    } catch {
+      console.log(
+        "[contact] Resend send result (non-serializable):",
+        sendResult
+      );
+    }
+
+    // If Resend returned an error object, surface a helpful error to the client
+    type ResendError = {
+      message?: string;
+      statusCode?: number;
+      name?: string;
+      [key: string]: unknown;
+    };
+    const maybeError = (sendResult as unknown as { error?: ResendError })
+      ?.error;
+    if (maybeError) {
+      console.error("[contact] Resend returned error:", maybeError);
+      return NextResponse.json(
+        {
+          error: maybeError.message || "Failed to send email (resend error)",
+          details: {
+            statusCode: maybeError.statusCode,
+            name: maybeError.name,
+          },
+        },
         { status: 500 }
       );
     }
@@ -153,7 +227,7 @@ Timestamp: ${new Date().toLocaleString()}
       {
         success: true,
         message: "Email sent successfully",
-        id: data?.id,
+        id: sendResult?.id ?? sendResult?.data?.id ?? null,
       },
       { status: 200 }
     );

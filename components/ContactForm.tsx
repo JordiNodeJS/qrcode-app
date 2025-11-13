@@ -123,8 +123,8 @@ export default function ContactForm() {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+    <div className="w-full max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+      <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-6 text-center">
         Contact Us
       </h2>
 
@@ -132,7 +132,7 @@ export default function ContactForm() {
         {/* Success Message */}
         {success && (
           <div
-            className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700"
+            className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400"
             role="alert"
           >
             ✓ Message sent successfully! We&apos;ll get back to you soon.
@@ -142,7 +142,7 @@ export default function ContactForm() {
         {/* API Error Message */}
         {apiError && (
           <div
-            className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"
+            className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400"
             role="alert"
           >
             {apiError}
@@ -153,7 +153,7 @@ export default function ContactForm() {
         <div>
           <label
             htmlFor="name"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
           >
             Name <span className="text-red-500">*</span>
           </label>
@@ -164,8 +164,8 @@ export default function ContactForm() {
             value={formData.name}
             onChange={handleChange}
             maxLength={100}
-            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              errors.name ? "border-red-500" : "border-gray-300"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
+              errors.name ? "border-red-500" : "border-gray-300 dark:border-gray-600"
             }`}
             aria-label="Your name"
             aria-required="true"
@@ -173,7 +173,7 @@ export default function ContactForm() {
             aria-describedby={errors.name ? "name-error" : undefined}
           />
           {errors.name && (
-            <p id="name-error" className="mt-1 text-sm text-red-600">
+            <p id="name-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
               {errors.name}
             </p>
           )}
@@ -183,7 +183,7 @@ export default function ContactForm() {
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
           >
             Email <span className="text-red-500">*</span>
           </label>
@@ -193,8 +193,8 @@ export default function ContactForm() {
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              errors.email ? "border-red-500" : "border-gray-300"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
+              errors.email ? "border-red-500" : "border-gray-300 dark:border-gray-600"
             }`}
             aria-label="Your email address"
             aria-required="true"
@@ -202,7 +202,7 @@ export default function ContactForm() {
             aria-describedby={errors.email ? "email-error" : undefined}
           />
           {errors.email && (
-            <p id="email-error" className="mt-1 text-sm text-red-600">
+            <p id="email-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
               {errors.email}
             </p>
           )}
@@ -212,7 +212,7 @@ export default function ContactForm() {
         <div>
           <label
             htmlFor="subject"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
           >
             Subject <span className="text-red-500">*</span>
           </label>
@@ -223,8 +223,8 @@ export default function ContactForm() {
             value={formData.subject}
             onChange={handleChange}
             maxLength={200}
-            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              errors.subject ? "border-red-500" : "border-gray-300"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
+              errors.subject ? "border-red-500" : "border-gray-300 dark:border-gray-600"
             }`}
             aria-label="Email subject"
             aria-required="true"
@@ -232,7 +232,7 @@ export default function ContactForm() {
             aria-describedby={errors.subject ? "subject-error" : undefined}
           />
           {errors.subject && (
-            <p id="subject-error" className="mt-1 text-sm text-red-600">
+            <p id="subject-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
               {errors.subject}
             </p>
           )}
@@ -242,7 +242,7 @@ export default function ContactForm() {
         <div>
           <label
             htmlFor="message"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
           >
             Message <span className="text-red-500">*</span>
           </label>
@@ -253,19 +253,19 @@ export default function ContactForm() {
             value={formData.message}
             onChange={handleChange}
             maxLength={1000}
-            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
-              errors.message ? "border-red-500" : "border-gray-300"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
+              errors.message ? "border-red-500" : "border-gray-300 dark:border-gray-600"
             }`}
             aria-label="Your message"
             aria-required="true"
             aria-invalid={!!errors.message}
             aria-describedby={errors.message ? "message-error" : undefined}
           />
-          <div className="flex justify-between mt-2 text-sm text-gray-500">
+          <div className="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
             <span>{formData.message.length} / 1000 characters</span>
           </div>
           {errors.message && (
-            <p id="message-error" className="mt-1 text-sm text-red-600">
+            <p id="message-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
               {errors.message}
             </p>
           )}
@@ -275,7 +275,7 @@ export default function ContactForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          className="w-full px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
         >
           {loading ? (
             <span className="flex items-center justify-center">
@@ -302,11 +302,14 @@ export default function ContactForm() {
               Sending...
             </span>
           ) : (
-            "📧 Send Message"
+            <span className="inline-flex items-center justify-center gap-2">
+              <span className="material-symbols-outlined">send</span>
+              <span>Send Message</span>
+            </span>
           )}
         </button>
 
-        <p className="text-sm text-gray-500 text-center">* Required fields</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">* Required fields</p>
       </form>
     </div>
   );
