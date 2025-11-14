@@ -61,15 +61,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // server-rendered markup matches the initial client render during
   // hydration. After the component mounts we read the stored/system
   // preference and update the theme, avoiding hydration mismatches.
-  const [theme, setTheme] = useState<Theme>(() => "light");
-
-  useEffect(() => {
-    // On mount, resolve the real initial theme (from localStorage or
-    // system preference) and apply it. This runs after hydration so
-    // React will update the UI without causing a hydration mismatch.
-    const resolved = resolveInitialTheme();
-    setTheme(resolved);
-  }, []);
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "light";
+    return resolveInitialTheme();
+  });
 
   useEffect(() => {
     applyTheme(theme);

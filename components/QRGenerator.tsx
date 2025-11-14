@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import QRCode from "qrcode";
 import Image from "next/image";
 
 export default function QRGenerator() {
   const [text, setText] = useState("");
   const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [qrWidth, setQrWidth] = useState<number>(300);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const resizeTimeout = useRef<number | null>(null);
 
   useEffect(() => {
     if (text.trim()) {
@@ -16,7 +18,41 @@ export default function QRGenerator() {
     } else {
       setQrCodeUrl("");
     }
-  }, [text]);
+  }, [text, qrWidth]);
+
+  // Set QR width based on viewport (responsive) and listen for resize
+  useEffect(() => {
+    function updateWidth() {
+      try {
+        const vw = Math.max(120, Math.floor(window.innerWidth * 0.8));
+        // Cap the generated QR size for performance
+        const size = Math.min(600, vw);
+        setQrWidth(size);
+      } catch (e) {
+        setQrWidth(300);
+      }
+    }
+
+    updateWidth();
+
+    function onResize() {
+      if (resizeTimeout.current) {
+        window.clearTimeout(resizeTimeout.current);
+      }
+      // Debounce resize events
+      resizeTimeout.current = window.setTimeout(() => {
+        updateWidth();
+      }, 150);
+    }
+
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (resizeTimeout.current) {
+        window.clearTimeout(resizeTimeout.current);
+      }
+    };
+  }, []);
 
   const generateQRCode = async (value: string) => {
     if (!value.trim()) {
@@ -36,7 +72,7 @@ export default function QRGenerator() {
 
       const url = await QRCode.toDataURL(value, {
         errorCorrectionLevel: "M",
-        width: 300,
+        width: qrWidth,
         margin: 4,
         color: {
           dark: "#000000",
@@ -122,14 +158,17 @@ export default function QRGenerator() {
 
           {qrCodeUrl && !loading && (
             <>
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-2 border-gray-200 dark:border-gray-600">
+              <div
+                className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-2 border-gray-200 dark:border-gray-600"
+                style={{ width: `min(90vw, ${qrWidth}px)` }}
+              >
                 <Image
                   src={qrCodeUrl}
                   alt="Generated QR Code"
-                  width={300}
-                  height={300}
+                  width={qrWidth}
+                  height={qrWidth}
                   unoptimized
-                  className="w-full max-w-[300px] h-auto"
+                  className="w-full h-auto"
                 />
               </div>
 
