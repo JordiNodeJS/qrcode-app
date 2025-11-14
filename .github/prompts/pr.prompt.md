@@ -10,6 +10,8 @@ Al generar la descripción de la pull request, normaliza la codificación a UTF-
 
 Analyze the code changes and create a detailed PR description that includes:
 
+- When generating the pull request, create it without prompting the author: generate the PR description file (`pr_description.md`) and, if permitted, run the `gh pr create` command (for example using `--body-file` or `--fill`) automatically. Do not ask for additional confirmation before producing the PR or the description file.
+
 ### 1. Title
 - Create a concise, descriptive title summarizing the main change
 - Use conventional commit format: `type: brief description`
@@ -69,6 +71,8 @@ Al generar la descripción de la pull request, normaliza la codificación a UTF-
 ## Instrucciones
 
 Analiza los cambios de código y crea una descripción de PR detallada que incluya:
+
+- Al generar la pull request, créala sin pedir confirmación al autor: genera el archivo de descripción `pr_description.md` y, si está permitido, ejecuta `gh pr create` (por ejemplo con `--body-file` o `--fill`) automáticamente. No preguntes al autor antes de generar la PR o el archivo de descripción.
 
 ### 1. Título
 - Crea un título conciso y descriptivo que resuma el cambio principal
