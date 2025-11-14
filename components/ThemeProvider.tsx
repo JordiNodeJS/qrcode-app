@@ -18,7 +18,7 @@ const getStoredTheme = (): Theme | null => {
     if (stored === "light" || stored === "dark") {
       return stored;
     }
-  } catch {
+  } catch (err) {
     // Ignore storage access issues (Safari private mode, etc.)
   }
   return null;
@@ -30,7 +30,7 @@ const getSystemTheme = (): Theme => {
     return window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light";
-  } catch {
+  } catch (err) {
     return "light";
   }
 };
@@ -42,7 +42,7 @@ const applyTheme = (nextTheme: Theme) => {
   root.style.colorScheme = nextTheme;
   try {
     window.localStorage.setItem("theme", nextTheme);
-  } catch {
+  } catch (err) {
     // Ignore write failures
   }
 };
@@ -61,14 +61,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // server-rendered markup matches the initial client render during
   // hydration. After the component mounts we read the stored/system
   // preference and update the theme, avoiding hydration mismatches.
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "light";
-    return resolveInitialTheme();
-  });
+  // Start with a deterministic "light" value on both server and client
+  // so the initial render matches the server. We then resolve the real
+  // preference on mount and apply it.
+  const [theme, setTheme] = useState<Theme>("light");
+  const [mounted, setMounted] = useState(false);
 
+  // Apply theme only after we've mounted and resolved the real value.
   useEffect(() => {
+    if (!mounted) return;
     applyTheme(theme);
-  }, [theme]);
+  }, [theme, mounted]);
+
+  // Resolve the stored/system preference on mount and mark mounted.
+  useEffect(() => {
+    const resolved = resolveInitialTheme();
+    setTheme(resolved);
+    setMounted(true);
+  }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));

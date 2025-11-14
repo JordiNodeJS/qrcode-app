@@ -1,20 +1,14 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import React, { ChangeEvent, FormEvent, useEffect, useState } from "react";
 
-interface FormData {
+type FormData = {
   name: string;
   email: string;
   subject: string;
   message: string;
-}
-
-interface FormErrors {
-  name?: string;
-  email?: string;
-  subject?: string;
-  message?: string;
-}
+};
+type Ticket = { id: string; timestamp: number; data: FormData };
 
 export default function ContactForm() {
   const [formData, setFormData] = useState<FormData>({
@@ -23,73 +17,51 @@ export default function ContactForm() {
     subject: "",
     message: "",
   });
-
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [errors, setErrors] = useState<Partial<FormData>>({});
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [apiError, setApiError] = useState("");
-  const [ticket, setTicket] = useState<
-    | {
-        id: string | null;
-        timestamp: string;
-        data: FormData;
-      }
-    | null
-  >(null);
+  const [ticket, setTicket] = useState<Ticket | null>(null);
   const [copied, setCopied] = useState(false);
+  const [persistCopyTooltip, setPersistCopyTooltip] = useState(false);
+  const [persistPrintTooltip, setPersistPrintTooltip] = useState(false);
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  useEffect(() => {
+    const onDocClick = (ev: MouseEvent) => {
+      const target = ev.target as Node | null;
+      const copyBtn = document.getElementById("copy-ticket-btn");
+      const printBtn = document.getElementById("print-ticket-btn");
+      if (persistCopyTooltip && copyBtn && !copyBtn.contains(target))
+        setPersistCopyTooltip(false);
+      if (persistPrintTooltip && printBtn && !printBtn.contains(target))
+        setPersistPrintTooltip(false);
+    };
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, [persistCopyTooltip, persistPrintTooltip]);
 
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
+  const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-    if (formData.name.trim().length < 2) {
-      newErrors.name = "El nombre debe tener al menos 2 caracteres";
-    } else if (formData.name.trim().length > 100) {
-      newErrors.name = "El nombre no debe exceder 100 caracteres";
-    }
+  function validateForm(): boolean {
+    const next: Partial<FormData> = {};
+    if (!formData.name.trim()) next.name = "Required";
+    if (!formData.email.trim()) next.email = "Required";
+    else if (!validateEmail(formData.email)) next.email = "Invalid email";
+    if (!formData.subject.trim()) next.subject = "Required";
+    if (!formData.message.trim()) next.message = "Required";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
 
-    if (!validateEmail(formData.email)) {
-      newErrors.email = "Por favor, introduce una dirección de correo válida";
-    }
-
-    if (formData.subject.trim().length < 5) {
-      newErrors.subject = "El asunto debe tener al menos 5 caracteres";
-    } else if (formData.subject.trim().length > 200) {
-      newErrors.subject = "El asunto no debe exceder 200 caracteres";
-    }
-
-    if (formData.message.trim().length < 10) {
-      newErrors.message = "El mensaje debe tener al menos 10 caracteres";
-    } else if (formData.message.trim().length > 1000) {
-      newErrors.message = "El mensaje no debe exceder 1000 caracteres";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  function handleChange(
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((s) => ({ ...s, [name]: value }));
+    setErrors((p) => ({ ...p, [name]: undefined }));
+  }
 
-    if ((errors as any)[name]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
-  };
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setApiError("");
-    setSuccess(false);
-
     if (!validateForm()) return;
-
     setLoading(true);
     try {
       const res = await fetch("/api/contact", {
@@ -97,185 +69,240 @@ export default function ContactForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to send message");
-
-      const submitted = { ...formData };
-      setSuccess(true);
-      setTicket({ id: data?.id ?? null, timestamp: new Date().toISOString(), data: submitted });
-
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Server error");
+      const id = json?.id ?? `local-${Date.now()}`;
+      setTicket({ id, timestamp: Date.now(), data: formData });
       setFormData({ name: "", email: "", subject: "", message: "" });
-      setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
-      setApiError(err instanceof Error ? err.message : "Failed to send message.");
+      console.error(err);
+      setTicket({
+        id: `error-${Date.now()}`,
+        timestamp: Date.now(),
+        data: formData,
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const escapeHtml = (str: string) =>
-    str
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-
-  const handleCopyTicket = async () => {
+  async function handleCopyTicket() {
     if (!ticket) return;
-    const text = `ID de ticket: ${ticket.id ?? "-"}\nFecha: ${new Date(ticket.timestamp).toLocaleString()}\n\nNombre: ${ticket.data.name}\nCorreo: ${ticket.data.email}\nAsunto: ${ticket.data.subject}\n\nMensaje:\n${ticket.data.message}`;
+    const text = `Ticket: ${ticket.id}\nDate: ${new Date(
+      ticket.timestamp
+    ).toLocaleString()}\nName: ${ticket.data.name}\nEmail: ${
+      ticket.data.email
+    }\nSubject: ${ticket.data.subject}\nMessage:\n${ticket.data.message}`;
     try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+      if (navigator.clipboard?.writeText)
+        await navigator.clipboard.writeText(text);
       else {
         const ta = document.createElement("textarea");
         ta.value = text;
-        ta.setAttribute("readonly", "");
-        ta.style.position = "absolute";
-        ta.style.left = "-9999px";
         document.body.appendChild(ta);
         ta.select();
         document.execCommand("copy");
         document.body.removeChild(ta);
       }
       setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
-    } catch {
-      setCopied(false);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error("copy failed", e);
     }
-  };
+    setPersistCopyTooltip(false);
+  }
 
-  const handlePrintTicket = () => {
+  function escapeHtml(s: string) {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;");
+  }
+
+  function handlePrintTicket() {
     if (!ticket) return;
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Ticket ${ticket.id ?? ""}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px;color:#111} .ticket{max-width:800px;margin:0 auto} .field{margin-bottom:12px} pre{white-space:pre-wrap;background:#f5f5f5;padding:10px;border-radius:4px}</style></head><body><div class="ticket"><h1>Resumen de envío</h1><p><strong>ID de ticket:</strong> ${ticket.id ?? "-"}</p><p><strong>Fecha:</strong> ${new Date(ticket.timestamp).toLocaleString()}</p><div class="field"><strong>Nombre:</strong> ${escapeHtml(ticket.data.name)}</div><div class="field"><strong>Correo:</strong> ${escapeHtml(ticket.data.email)}</div><div class="field"><strong>Asunto:</strong> ${escapeHtml(ticket.data.subject)}</div><div class="field"><strong>Mensaje:</strong><pre>${escapeHtml(ticket.data.message)}</pre></div></div><script>window.onload=function(){window.print();setTimeout(()=>window.close(),750);}</script></body></html>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Ticket ${escapeHtml(
+      ticket.id
+    )}</title><meta name="viewport" content="width=device-width,initial-scale=1" /><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:20px;color:#111} pre{white-space:pre-wrap}</style></head><body><h1>Submission summary</h1><div><strong>Ticket:</strong> ${escapeHtml(
+      ticket.id
+    )}</div><div><strong>Date:</strong> ${escapeHtml(
+      new Date(ticket.timestamp).toLocaleString()
+    )}</div><div><strong>Name:</strong> ${escapeHtml(
+      ticket.data.name
+    )}</div><div><strong>Email:</strong> ${escapeHtml(
+      ticket.data.email
+    )}</div><div><strong>Subject:</strong> ${escapeHtml(
+      ticket.data.subject
+    )}</div><hr/><pre>${escapeHtml(
+      ticket.data.message
+    )}</pre><script>window.print();</script></body></html>`;
     const w = window.open("", "_blank", "noopener,noreferrer");
-    if (!w) return;
-    w.document.write(html);
-    w.document.close();
-  };
-
-  useEffect(() => {
-    const el = document.getElementById(ticket ? "contact-ticket" : "contact-success");
-    if (el) setTimeout(() => (el as HTMLElement).focus(), 100);
-  }, [ticket, success]);
-
-      return (
-        <div className="w-full max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-          <h2 id="contact-heading" className="text-3xl font-bold text-gray-800 dark:text-white mb-6 text-center">
-            Contacto
-          </h2>
-
-          <form onSubmit={handleSubmit} className="space-y-6" noValidate aria-labelledby="contact-heading" aria-describedby="contact-instructions">
-            <p id="contact-instructions" className="sr-only">
-              Todos los campos marcados con un asterisco son obligatorios. Responderemos en un plazo de 2 días hábiles.
-            </p>
-
-            <fieldset aria-describedby="contact-instructions" className="space-y-6 border-0 p-0 m-0">
-              <legend className="sr-only">Contact form</legend>
-
-              {success && !ticket && (
-                <div id="contact-success" tabIndex={-1} className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400" role="alert" aria-live="assertive">
-                  ¡Mensaje enviado con éxito! Nos pondremos en contacto pronto.
-                </div>
-              )}
-
-              {ticket && (
-                <div id="contact-ticket" tabIndex={-1} className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100" role="region" aria-labelledby="ticket-heading">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 id="ticket-heading" className="text-lg font-semibold">Resumen de envío</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Guarda este ticket para referencia.</p>
-                    </div>
-                    <div className="text-right text-sm text-gray-600 dark:text-gray-300 flex flex-col items-end gap-2">
-                      <div><span className="font-mono">{ticket.id ?? "-"}</span></div>
-                      <div className="text-xs">{new Date(ticket.timestamp).toLocaleString()}</div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <button type="button" onClick={handleCopyTicket} title="Copiar ticket" aria-label="Copiar ticket" className="px-3 py-1 bg-gray-100 dark:bg-gray-800 border rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-2">
-                          <span className="material-symbols-outlined text-sm" aria-hidden>content_copy</span>
-                          <span>Copiar ticket</span>
-                        </button>
-                        <button type="button" onClick={handlePrintTicket} title="Imprimir ticket" aria-label="Imprimir ticket" className="px-3 py-1 bg-gray-100 dark:bg-gray-800 border rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-2">
-                          <span className="material-symbols-outlined text-sm" aria-hidden>print</span>
-                          <span>Imprimir ticket</span>
-                        </button>
-                      </div>
-                      {copied && <div className="text-xs text-green-600 dark:text-green-400 mt-1">Copiado al portapapeles</div>}
-                    </div>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
-                    <div><strong>Nombre:</strong> <span className="ml-1">{ticket.data.name}</span></div>
-                    <div><strong>Correo:</strong> <span className="ml-1">{ticket.data.email}</span></div>
-                    <div><strong>Asunto:</strong> <span className="ml-1">{ticket.data.subject}</span></div>
-                    <div>
-                      <strong>Mensaje:</strong>
-                      <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-800 border rounded text-sm whitespace-pre-wrap">{ticket.data.message}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {apiError && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400" role="alert" aria-live="assertive">
-                  {apiError}
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Nombre <span aria-hidden className="text-red-500">*</span>
-                  <span className="sr-only"> requerido</span>
-                </label>
-                <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} maxLength={100} autoComplete="name" required className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${errors.name ? "border-red-500" : "border-gray-300 dark:border-gray-600"}`} aria-label="Tu nombre" aria-required="true" aria-invalid={!!errors.name} aria-describedby={errors.name ? "name-error" : undefined} />
-                {errors.name && <p id="name-error" role="alert" aria-live="assertive" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>}
-              </div>
-
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Correo electrónico <span aria-hidden className="text-red-500">*</span>
-                  <span className="sr-only"> requerido</span>
-                </label>
-                <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} autoComplete="email" required className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${errors.email ? "border-red-500" : "border-gray-300 dark:border-gray-600"}`} aria-label="Tu correo electrónico" aria-required="true" aria-invalid={!!errors.email} aria-describedby={errors.email ? "email-error" : undefined} />
-                {errors.email && <p id="email-error" role="alert" aria-live="assertive" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>}
-              </div>
-
-              <div>
-                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Asunto <span aria-hidden className="text-red-500">*</span>
-                  <span className="sr-only"> requerido</span>
-                </label>
-                <input type="text" id="subject" name="subject" value={formData.subject} onChange={handleChange} maxLength={200} autoComplete="on" required className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${errors.subject ? "border-red-500" : "border-gray-300 dark:border-gray-600"}`} aria-label="Asunto del correo" aria-required="true" aria-invalid={!!errors.subject} aria-describedby={errors.subject ? "subject-error" : undefined} />
-                {errors.subject && <p id="subject-error" role="alert" aria-live="assertive" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.subject}</p>}
-              </div>
-
-              <div>
-                <label htmlFor="message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Mensaje <span aria-hidden className="text-red-500">*</span>
-                  <span className="sr-only"> requerido</span>
-                </label>
-                <textarea id="message" name="message" rows={6} value={formData.message} onChange={handleChange} maxLength={1000} autoComplete="off" required className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-none text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${errors.message ? "border-red-500" : "border-gray-300 dark:border-gray-600"}`} aria-label="Tu mensaje" aria-required="true" aria-invalid={!!errors.message} aria-describedby={errors.message ? "message-error message-counter" : "message-counter"} />
-                <div className="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  <span id="message-counter" aria-live="polite">{formData.message.length} / 1000 caracteres</span>
-                </div>
-                {errors.message && <p id="message-error" role="alert" aria-live="assertive" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.message}</p>}
-              </div>
-
-              <button type="submit" disabled={loading} className="w-full px-6 py-3 bg-sky-600 dark:bg-sky-500 text-white font-semibold rounded-lg hover:bg-sky-700 dark:hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200" aria-disabled={loading}>
-                {loading ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Enviando...
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center justify-center gap-2"><span className="material-symbols-outlined">send</span><span>Enviar mensaje</span></span>
-                )}
-              </button>
-
-              <p className="text-sm text-gray-500 dark:text-gray-400 text-center"><span aria-hidden>*</span> Campos obligatorios</p>
-            </fieldset>
-          </form>
-        </div>
-      );
+    if (w) {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
     }
+    setPersistPrintTooltip(false);
+  }
+
+  return (
+    <div className="w-full max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+      <h2 className="text-2xl font-semibold mb-4 text-center">Contact</h2>
+
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <div>
+          <label className="block text-sm font-medium mb-1">Name</label>
+          <input
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+          />
+          {errors.name && (
+            <div className="text-xs text-red-600 mt-1">{errors.name}</div>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Email</label>
+          <input
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+          />
+          {errors.email && (
+            <div className="text-xs text-red-600 mt-1">{errors.email}</div>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Subject</label>
+          <input
+            name="subject"
+            value={formData.subject}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+          />
+          {errors.subject && (
+            <div className="text-xs text-red-600 mt-1">{errors.subject}</div>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Message</label>
+          <textarea
+            name="message"
+            value={formData.message}
+            onChange={handleChange}
+            rows={5}
+            className="w-full border rounded px-3 py-2"
+          />
+          {errors.message && (
+            <div className="text-xs text-red-600 mt-1">{errors.message}</div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+            disabled={loading}
+          >
+            {loading ? "Sending..." : "Send"}
+          </button>
+          {ticket && (
+            <div className="flex items-center gap-2">
+              <div className="text-xs text-gray-600 font-mono">{ticket.id}</div>
+              <button
+                id="copy-ticket-btn"
+                type="button"
+                onClick={() => {
+                  if (persistCopyTooltip) {
+                    handleCopyTicket();
+                    return;
+                  }
+                  setPersistCopyTooltip(true);
+                }}
+                className="relative group px-3 py-1 bg-gray-100 rounded text-sm inline-flex items-center gap-1"
+                aria-label="Copy ticket"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  content_copy
+                </span>
+                <span>Copy</span>
+                <span
+                  className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 rounded bg-gray-800 text-white text-xs px-2 py-1 transition-all ${
+                    persistCopyTooltip
+                      ? "opacity-100 scale-100"
+                      : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100"
+                  }`}
+                >
+                  Copy ticket
+                </span>
+              </button>
+              <button
+                id="print-ticket-btn"
+                type="button"
+                onClick={() => {
+                  if (persistPrintTooltip) {
+                    handlePrintTicket();
+                    return;
+                  }
+                  setPersistPrintTooltip(true);
+                }}
+                className="relative group px-3 py-1 bg-gray-100 rounded text-sm inline-flex items-center gap-1"
+                aria-label="Print ticket"
+              >
+                <span className="material-symbols-outlined text-sm">print</span>
+                <span>Print</span>
+                <span
+                  className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 rounded bg-gray-800 text-white text-xs px-2 py-1 transition-all ${
+                    persistPrintTooltip
+                      ? "opacity-100 scale-100"
+                      : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100"
+                  }`}
+                >
+                  Print ticket
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      </form>
+
+      {ticket && (
+        <div
+          id="contact-ticket"
+          tabIndex={-1}
+          className="mt-4 p-4 bg-white dark:bg-gray-900 border rounded"
+        >
+          <h3 className="font-semibold">Submission summary</h3>
+          <div className="text-xs text-gray-500 mb-2">
+            {new Date(ticket.timestamp).toLocaleString()}
+          </div>
+          <div className="text-sm">
+            <div>
+              <strong>Name:</strong> {ticket.data.name}
+            </div>
+            <div>
+              <strong>Email:</strong> {ticket.data.email}
+            </div>
+            <div>
+              <strong>Subject:</strong> {ticket.data.subject}
+            </div>
+            <div className="mt-2 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800 p-2 rounded text-sm">
+              {ticket.data.message}
+            </div>
+          </div>
+          {copied && (
+            <div className="text-xs text-green-600 mt-2">
+              Copied to clipboard
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

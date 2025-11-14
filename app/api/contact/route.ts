@@ -29,11 +29,11 @@ const validateFormData = (data: ContactFormData): string | null => {
     data.name.trim().length < 2 ||
     data.name.trim().length > 100
   ) {
-    return "Name must be between 2 and 100 characters";
+    return "El nombre debe tener entre 2 y 100 caracteres";
   }
 
   if (!data.email || !validateEmail(data.email)) {
-    return "Invalid email address";
+    return "Dirección de correo inválida";
   }
 
   if (
@@ -41,7 +41,7 @@ const validateFormData = (data: ContactFormData): string | null => {
     data.subject.trim().length < 5 ||
     data.subject.trim().length > 200
   ) {
-    return "Subject must be between 5 and 200 characters";
+    return "El asunto debe tener entre 5 y 200 caracteres";
   }
 
   if (
@@ -49,7 +49,7 @@ const validateFormData = (data: ContactFormData): string | null => {
     data.message.trim().length < 10 ||
     data.message.trim().length > 1000
   ) {
-    return "Message must be between 10 and 1000 characters";
+    return "El mensaje debe tener entre 10 y 1000 caracteres";
   }
 
   return null;
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         `[contact] Incoming request at ${new Date().toISOString()}:`,
         JSON.stringify(body)
       );
-    } catch {
+    } catch (err) {
       console.log("[contact] Incoming request (non-serializable)", body);
     }
 
@@ -77,12 +77,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if API key is configured (don't print the key itself)
+    let useMockSend = false;
     if (!process.env.RESEND_API_KEY) {
-      console.error("[contact] RESEND_API_KEY is not configured");
-      return NextResponse.json(
-        { error: "Email service is not configured" },
-        { status: 500 }
-      );
+      if (process.env.NODE_ENV === "development") {
+        // Allow a local mock when developing so front-end behavior can be tested
+        useMockSend = true;
+        console.log(
+          "[contact] RESEND_API_KEY not configured: using mock send in development"
+        );
+      } else {
+        console.error("[contact] RESEND_API_KEY is not configured");
+        return NextResponse.json(
+          { error: "Email service is not configured" },
+          { status: 500 }
+        );
+      }
     } else {
       console.log("[contact] RESEND_API_KEY is configured: YES");
     }
@@ -90,18 +99,26 @@ export async function POST(request: NextRequest) {
     // Send email using Resend. Wrap in try/catch and log full details for debugging.
     let sendResult: ResendSendResult | null = null;
     try {
-      // Allow overriding from/to via environment for testing/production
-      const mailFrom =
-        process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
-      const mailTo = process.env.RESEND_TO_EMAIL
-        ? process.env.RESEND_TO_EMAIL.split(",").map((s) => s.trim())
-        : ["info@webcode.es"];
+      if (useMockSend) {
+        // Create a fake send result for development testing
+        sendResult = {
+          id: `local-${Date.now()}`,
+          data: { id: `local-${Date.now()}` },
+        };
+        console.log("[contact] Mock send result:", sendResult);
+      } else {
+        // Allow overriding from/to via environment for testing/production
+        const mailFrom =
+          process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+        const mailTo = process.env.RESEND_TO_EMAIL
+          ? process.env.RESEND_TO_EMAIL.split(",").map((s) => s.trim())
+          : ["info@webcode.es"];
 
-      sendResult = await resend.emails.send({
-        from: mailFrom,
-        to: mailTo,
-        subject: `Contact Form: ${body.subject}`,
-        html: `
+        sendResult = await resend.emails.send({
+          from: mailFrom,
+          to: mailTo,
+          subject: `Formulario de contacto: ${body.subject}`,
+          html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -120,25 +137,25 @@ export async function POST(request: NextRequest) {
           <body>
             <div class="container">
               <div class="header">
-                <h2 style="margin: 0;">New Contact Form Submission</h2>
+                <h2 style="margin: 0;">Nueva solicitud de contacto</h2>
               </div>
               <div class="content">
                 <div class="field">
-                  <div class="field-label">From:</div>
+                  <div class="field-label">De:</div>
                   <div class="field-value">${body.name}</div>
                 </div>
                 <div class="field">
-                  <div class="field-label">Email:</div>
+                  <div class="field-label">Correo:</div>
                   <div class="field-value"><a href="mailto:${body.email}">${
-          body.email
-        }</a></div>
+            body.email
+          }</a></div>
                 </div>
                 <div class="field">
-                  <div class="field-label">Subject:</div>
+                  <div class="field-label">Asunto:</div>
                   <div class="field-value">${body.subject}</div>
                 </div>
                 <div class="field">
-                  <div class="field-label">Message:</div>
+                  <div class="field-label">Mensaje:</div>
                   <div class="field-value">${body.message.replace(
                     /\n/g,
                     "<br>"
@@ -146,28 +163,29 @@ export async function POST(request: NextRequest) {
                 </div>
               </div>
               <div class="footer">
-                <p>This email was sent from the QR Code Generator contact form</p>
-                <p>Timestamp: ${new Date().toLocaleString()}</p>
+                <p>Este correo fue enviado desde el formulario de contacto del Generador de códigos QR</p>
+                <p>Fecha: ${new Date().toLocaleString()}</p>
               </div>
             </div>
           </body>
         </html>
       `,
-        text: `
-New Contact Form Submission
+          text: `
+Nueva solicitud de contacto
 
-From: ${body.name}
-Email: ${body.email}
-Subject: ${body.subject}
+De: ${body.name}
+Correo: ${body.email}
+Asunto: ${body.subject}
 
-Message:
+Mensaje:
 ${body.message}
 
 ---
-Sent from QR Code Generator
-Timestamp: ${new Date().toLocaleString()}
+Enviado desde Generador de códigos QR
+Fecha: ${new Date().toLocaleString()}
       `.trim(),
-      });
+        });
+      }
     } catch (sendErr) {
       // Log full error object and return a generic error to the client
       console.error(
@@ -177,7 +195,7 @@ Timestamp: ${new Date().toLocaleString()}
       try {
         // If the error has a response/body, try to log it
         console.error("[contact] Resend error (raw):", JSON.stringify(sendErr));
-      } catch {
+      } catch (err) {
         // ignore
       }
 
@@ -193,7 +211,7 @@ Timestamp: ${new Date().toLocaleString()}
         "[contact] Resend send result:",
         JSON.stringify(sendResult, null, 2)
       );
-    } catch {
+    } catch (err) {
       console.log(
         "[contact] Resend send result (non-serializable):",
         sendResult
@@ -226,7 +244,7 @@ Timestamp: ${new Date().toLocaleString()}
     return NextResponse.json(
       {
         success: true,
-        message: "Email sent successfully",
+        message: "Correo enviado con éxito",
         id: sendResult?.id ?? sendResult?.data?.id ?? null,
       },
       { status: 200 }
@@ -234,7 +252,7 @@ Timestamp: ${new Date().toLocaleString()}
   } catch (error) {
     console.error("Contact form error:", error);
     return NextResponse.json(
-      { error: "An unexpected error occurred. Please try again." },
+      { error: "Ocurrió un error inesperado. Por favor, inténtalo de nuevo." },
       { status: 500 }
     );
   }
