@@ -12,6 +12,8 @@ Analyze the code changes and create a detailed PR description that includes:
 
 - When generating the pull request, create it without prompting the author: generate the PR description file (`pr_description.md`) and, if permitted, run the `gh pr create` command (for example using `--body-file` or `--fill`) automatically. Do not ask for additional confirmation before producing the PR or the description file.
 
+- Before creating the PR, check whether the current branch is published and up to date on the remote. If the branch is not present remotely or has local commits that are not pushed, push the branch (for example `git push --set-upstream origin <branch>`). After ensuring the branch is published, create the PR using `gh pr create` with the generated `pr_description.md`. Once the PR has been created successfully, securely delete the temporary `pr_description.md` file. Do not prompt the author during these steps.
+
 ### 1. Title
 - Create a concise, descriptive title summarizing the main change
 - Use conventional commit format: `type: brief description`
@@ -73,6 +75,8 @@ Al generar la descripción de la pull request, normaliza la codificación a UTF-
 Analiza los cambios de código y crea una descripción de PR detallada que incluya:
 
 - Al generar la pull request, créala sin pedir confirmación al autor: genera el archivo de descripción `pr_description.md` y, si está permitido, ejecuta `gh pr create` (por ejemplo con `--body-file` o `--fill`) automáticamente. No preguntes al autor antes de generar la PR o el archivo de descripción.
+
+- Antes de crear la PR, comprueba si la rama actual está publicada y actualizada en el remoto. Si la rama no existe en el remoto o tiene commits locales sin empujar, publica la rama (por ejemplo `git push --set-upstream origin <branch>`). Tras asegurarte de que la rama está publicada, crea la PR usando `gh pr create` con `pr_description.md`. Una vez la PR se haya creado con éxito, elimina de forma segura el archivo temporal `pr_description.md`. No preguntes al autor durante estos pasos.
 
 ### 1. Título
 - Crea un título conciso y descriptivo que resuma el cambio principal
