@@ -39,150 +39,127 @@ lib/
 
 ## Coding Standards
 
-### TypeScript
-- Use explicit types for function parameters and return values
-- Avoid `any` type - use specific types or `unknown`
-- Use interfaces for object shapes
-- Export types alongside components
+# Copilot / AI Agent Instructions — QR Code App
 
-### React & Next.js
-- Prefer async Server Components for data fetching
-- Use Server Actions for form submissions when appropriate
-- Implement proper error boundaries
-- Use Next.js Image component for images
-- Use proper metadata exports for SEO
+This file gives concise, actionable guidance for AI coding agents working on this repository.
 
-### API Routes
-- Use App Router route handlers (`route.ts`)
-- Return proper HTTP status codes
-- Implement error handling with try-catch blocks
-- Validate input data before processing
-- Use environment variables for sensitive data
+## At-a-glance
+- Next.js 16 (App Router) + TypeScript + Tailwind CSS. Entry: `app/` (Server Components by default).
+- QR generation: `components/QRGenerator.tsx` (uses `qrcode` toDataURL, max 2000 chars).
+- Contact API: `app/api/contact/route.ts` (Resend email integration; includes a local mock path when `RESEND_API_KEY` is missing in development).
+- Package manager: `pnpm`. Scripts available in `package.json` (`dev`, `build`, `start`, `lint`).
 
-### Forms
-- Implement client-side validation
-- Provide user feedback (loading states, success/error messages)
-- Use proper HTML5 input types
-- Include accessibility attributes (aria-labels, roles)
+## Key files to inspect
+- `lib/utils.ts` — shared utility functions (validation, HTML escape, logging helpers).
+- `lib/constants.ts` — application-wide constants (QR limits, form validation limits, error messages).
+- `app/api/contact/route.ts` — validation rules, email HTML template, mock-send behavior, env overrides.
+- `components/ContactForm.tsx` — client-side validation, uses FormField component, ticket UI with copy/print.
+- `components/QRGenerator.tsx` — client-only, responsive QR generation, uses constants from lib/constants.
+- `components/FormField.tsx` — reusable form input/textarea component with error handling.
+- `components/PageLayout.tsx` — reusable page wrapper with gradient background.
+- `components/Button.tsx` — reusable button component with variants (primary, secondary, ghost).
+- `app/layout.tsx` — theme init script, `ThemeProvider`, global layout.
+- `package.json` — runtime and dev dependencies; use `pnpm` commands.
 
-### Styling
-- Use Tailwind CSS utility classes
-- Follow responsive design principles (mobile-first)
-- Use semantic color classes
-- Maintain consistent spacing scale
+## Architecture & conventions (project-specific)
+- **Server Components by default**: Only mark files with `'use client'` when they use browser APIs, hooks, or event handlers.
+- **Shared utilities**: Use `lib/utils.ts` for reusable functions (validation, escaping, logging). Use `lib/constants.ts` for app-wide constants.
+- **Reusable components**: `FormField`, `PageLayout`, and `Button` are available for consistent UI patterns.
+- **Validation**: Done both client-side (ContactForm with `lib/utils`) and server-side (route.ts with `lib/utils`). Server messages are in Spanish; client can be English.
+- **Contact route**: Validates fields using `validateFormData()`, checks `RESEND_API_KEY`, uses mock send in dev if key missing, calls `resend.emails.send()`.
+- **QR generation**: Limited to `QR_CODE_MAX_LENGTH` (2000 chars) from `lib/constants`. Width dynamically set based on viewport, capped at `QR_CODE_MAX_WIDTH`.
 
-### Error Handling
-- Catch and handle errors gracefully
-- Provide meaningful error messages to users
-- Log errors appropriately (but don't expose sensitive info)
+## Environment & integration notes
+- Required env: `RESEND_API_KEY` (put in `.env.local`). Optional overrides: `RESEND_FROM_EMAIL`, `RESEND_TO_EMAIL` (comma-separated).
+- If `RESEND_API_KEY` is missing and `NODE_ENV === 'development'`, route.ts uses a local mock send result — useful for local testing without sending real emails.
+- Do NOT log or commit secrets. The route logs send results and errors for debugging — keep those logs but avoid printing secrets.
 
-### Environment Variables
-- Store API keys in `.env.local`
-- Never commit `.env.local` to version control
-- Use `process.env.VARIABLE_NAME` for accessing env vars
-- Prefix public env vars with `NEXT_PUBLIC_`
+## Developer workflows (concrete commands)
+Install dependencies:
+# GitHub Copilot — Project Instructions (concise)
 
-## Build & Development Commands
+This file gives targeted, actionable guidance for AI coding agents working on this repository.
 
-### Install Dependencies
-```bash
+**Stack & entry points**
+- Next.js 16 (App Router) + TypeScript + Tailwind CSS. App entry: `app/` (Server Components by default).
+- Key files: `app/api/contact/route.ts`, `components/QRGenerator.tsx`, `components/ContactForm.tsx`, `app/layout.tsx`.
+
+**What to know first (big picture)**
+- UI: Server Components by default; interactive features are implemented as Client Components with `'use client'` (see `ContactForm.tsx` and `QRGenerator.tsx`).
+- QR flow: `QRGenerator.tsx` uses the `qrcode` package and calls `QRCode.toDataURL(...)` to produce data-URLs (capped at 2000 characters). Data URLs are rendered with `<Image unoptimized />`.
+- Contact flow: `app/api/contact/route.ts` validates input (Spanish messages), then sends email via the `resend` SDK or a local mock when `RESEND_API_KEY` is absent in development.
+- The app uses a ThemeProvider + a small init script in `app/layout.tsx` to toggle dark mode by adding `class="dark"` to `<html>` (Tailwind configured with `darkMode: 'class'`).
+
+**Important conventions & patterns**
+- Server vs Client: Only add `'use client'` when the component uses browser APIs, hooks, or event handlers (e.g., clipboard, window.print, localStorage).
+- Validation: Keep UI validation in sync with server rules. Server limits in `route.ts`: name 2–100, subject 5–200, message 10–1000, email validated by regex.
+- Environment safety: Never log secrets. `route.ts` logs results but never prints the API key. Use `RESEND_FROM_EMAIL` / `RESEND_TO_EMAIL` to override recipients.
+- Mocking: If `RESEND_API_KEY` is missing and `NODE_ENV === 'development'`, the route returns a mock send result so the front-end can behave normally during local dev.
+
+**Dev & debug commands**
+```
 pnpm install
-```
-
-### Development Server
-```bash
-pnpm dev
-```
-Server runs at http://localhost:3000
-
-### Build for Production
-```bash
+pnpm dev      # starts dev server on http://localhost:3000
 pnpm build
-```
-
-### Start Production Server
-```bash
 pnpm start
-```
-
-### Linting
-```bash
 pnpm lint
 ```
 
-## Testing Guidelines
-- Test QR code generation with various input lengths
-- Verify contact form validation
-- Test email sending functionality
-- Check responsive design on different screen sizes
-- Verify error states and loading states
+**Env / integration notes**
+- Required (local): create `.env.local` with `RESEND_API_KEY=...`.
+- Optional overrides: `RESEND_FROM_EMAIL`, `RESEND_TO_EMAIL` (comma-separated list).
+- In production, ensure `RESEND_API_KEY` is present; otherwise the API returns 500.
 
-## Security Considerations
-- Validate and sanitize all user inputs
-- Rate limit API endpoints if possible
-- Use HTTPS in production
-- Keep dependencies updated
-- Don't expose API keys in client-side code
+**Examples & code pointers**
+- QR generation: `components/QRGenerator.tsx` enforces `maxLength={2000}` on the textarea and checks `value.length > 2000` before generating.
+- Contact API: `app/api/contact/route.ts` composes an HTML + plain-text email and calls `resend.emails.send({...})`; it catches and logs errors and returns Spanish-friendly error messages to the client.
+- Contact UI: `components/ContactForm.tsx` posts JSON to `/api/contact`, then shows a ticket with copy/print helpers implemented via clipboard API and `window.open`/print.
 
-## Email Configuration (Resend)
-- API Key stored in `RESEND_API_KEY` environment variable
-- Emails sent to: info@webcode.es
-- Use proper email templates
-- Handle email sending errors gracefully
+**When editing**
+- Keep server messages in Spanish unless the change targets localization.
+- Preserve the mock-send behavior used during development or document how to replicate it if removed.
+- If you change the contact email HTML, update both the template in `route.ts` and the README if relevant.
+ 
+**Uso de la herramienta `apply_patch`**
 
-## Performance Optimization
-- Use Next.js Image optimization
-- Implement proper caching strategies
-- Minimize client-side JavaScript
-- Use Server Components for non-interactive content
-- Optimize images and assets
+- **Qué hace:** `apply_patch` aplica un diff/patch a archivos en el workspace. Úsalo para editar archivos existentes desde el agente.
+- **Parámetros obligatorios en la llamada a la función:**
+  - `input` (string): el contenido completo del patch en formato V4A. El string debe incluir `*** Begin Patch` y `*** End Patch` y todos los cambios intermedios.
+  - `explanation` (string): una breve explicación de para qué sirve el patch (1-2 oraciones).
+- **Formato del `input` (resumen rápido):**
+  - El patch empieza con `*** Begin Patch` y termina con `*** End Patch`.
+  - Para cada archivo a modificar: `*** Update File: /absolute/path/to/file`
+  - Use context lines y prefijos `-` (líneas a eliminar) y `+` (líneas a añadir).
+  - Use `@@` para indicar la función/clase o ubicación cuando sea necesario.
+  - No uses números de línea.
+- **Reglas importantes:**
+  - Usa rutas absolutas para los archivos (ej. `g:\DEV\tmp\qrcode-app\path\to\file`).
+  - Respeta la indentación original (tabs vs espacios).
+  - Evita mezclar cambios no relacionados en un mismo patch.
+  - Si necesitas crear nuevos archivos, usa `create_file` en lugar de `apply_patch`.
+- **Checklist antes de llamar a `apply_patch`:**
+  - Confirmar la ruta absoluta del archivo objetivo.
+  - Asegurarse de incluir `*** Begin Patch` y `*** End Patch` en `input`.
+  - Incluir `explanation` con una frase clara sobre el propósito.
+  - Revisar el patch para no romper la sintaxis del archivo.
+- **Ejemplo mínimo de `input` válido (copiar/adaptar):**
 
-## Accessibility
-- Use semantic HTML elements
-- Include proper ARIA labels
-- Ensure keyboard navigation works
-- Maintain sufficient color contrast
-- Test with screen readers
+  *** Begin Patch
+  *** Update File: g:\\DEV\\tmp\\qrcode-app\\.github\\copilot-instructions.md
+  @@
+  - If you change the contact email HTML, update both the template in `route.ts` and the README if relevant.
+  + If you change the contact email HTML, update both the template in `route.ts` and the README if relevant.
+  + Añadida una línea de ejemplo para `apply_patch`.
+  *** End Patch
 
-## Common Patterns
+Con esto se evita olvidar parámetros como `input` y `explanation`, o usar rutas relativas que causan fallos.
+If you'd like, I can also:
+- add a small test harness for the contact route (mocking Resend), or
+- add a sanity script to POST example payloads to `/api/contact` for local testing.
 
-### API Route with Error Handling
-```typescript
-export async function POST(request: Request) {
-  try {
-    const data = await request.json();
-    // Process data
-    return Response.json({ success: true });
-  } catch (error) {
-    return Response.json({ error: 'Error message' }, { status: 500 });
-  }
-}
-```
+Please review and tell me which parts to expand or clarify.
+If any section is unclear or you want more examples (e.g., a test harness for the contact route or a small script to simulate form submissions), tell me which part and I will extend this file accordingly.
 
-### Client Component with Form
-```typescript
-'use client'
-
-export default function MyForm() {
-  const [loading, setLoading] = useState(false);
-  
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      // Submit logic
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-  return <form onSubmit={handleSubmit}>...</form>;
-}
-```
-
-## Important Notes
-- Always run `pnpm install` after pulling changes
-- Test locally before committing
-- Keep commits atomic and well-described
-- Update documentation when adding features
-- Follow the existing code style and patterns
+### referencias para crear prompts personalizados y agentes
+https://code.visualstudio.com/docs/copilot/customization/prompt-files
+https://code.visualstudio.com/docs/copilot/customization/custom-agents

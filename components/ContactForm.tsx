@@ -1,6 +1,9 @@
 "use client";
 
 import React, { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { validateEmail, escapeHtml } from "@/lib/utils";
+import { CONTACT_FORM_ERRORS } from "@/lib/constants";
+import FormField from "./FormField";
 
 type FormData = {
   name: string;
@@ -38,15 +41,14 @@ export default function ContactForm() {
     return () => document.removeEventListener("click", onDocClick);
   }, [persistCopyTooltip, persistPrintTooltip]);
 
-  const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-
   function validateForm(): boolean {
     const next: Partial<FormData> = {};
-    if (!formData.name.trim()) next.name = "Required";
-    if (!formData.email.trim()) next.email = "Required";
-    else if (!validateEmail(formData.email)) next.email = "Invalid email";
-    if (!formData.subject.trim()) next.subject = "Required";
-    if (!formData.message.trim()) next.message = "Required";
+    if (!formData.name.trim()) next.name = CONTACT_FORM_ERRORS.required;
+    if (!formData.email.trim()) next.email = CONTACT_FORM_ERRORS.required;
+    else if (!validateEmail(formData.email))
+      next.email = CONTACT_FORM_ERRORS.invalidEmail;
+    if (!formData.subject.trim()) next.subject = CONTACT_FORM_ERRORS.required;
+    if (!formData.message.trim()) next.message = CONTACT_FORM_ERRORS.required;
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -112,14 +114,6 @@ export default function ContactForm() {
     setPersistCopyTooltip(false);
   }
 
-  function escapeHtml(s: string) {
-    return s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;");
-  }
-
   function handlePrintTicket() {
     if (!ticket) return;
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Ticket ${escapeHtml(
@@ -148,73 +142,59 @@ export default function ContactForm() {
 
   return (
     <div className="w-full max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
-      <h2 className="text-2xl font-semibold mb-4 text-center">Contact</h2>
+      <h2 className="text-2xl font-semibold mb-4 text-center text-gray-800 dark:text-white">
+        Contact
+      </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <div>
-          <label className="block text-sm font-medium mb-1">Name</label>
-          <input
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-          />
-          {errors.name && (
-            <div className="text-xs text-red-600 mt-1">{errors.name}</div>
-          )}
-        </div>
+        <FormField
+          label="Name"
+          name="name"
+          value={formData.name}
+          error={errors.name}
+          onChange={handleChange}
+        />
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
-          <input
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-          />
-          {errors.email && (
-            <div className="text-xs text-red-600 mt-1">{errors.email}</div>
-          )}
-        </div>
+        <FormField
+          label="Email"
+          name="email"
+          value={formData.email}
+          error={errors.email}
+          onChange={handleChange}
+          inputType="email"
+        />
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Subject</label>
-          <input
-            name="subject"
-            value={formData.subject}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-          />
-          {errors.subject && (
-            <div className="text-xs text-red-600 mt-1">{errors.subject}</div>
-          )}
-        </div>
+        <FormField
+          label="Subject"
+          name="subject"
+          value={formData.subject}
+          error={errors.subject}
+          onChange={handleChange}
+        />
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Message</label>
-          <textarea
-            name="message"
-            value={formData.message}
-            onChange={handleChange}
-            rows={5}
-            className="w-full border rounded px-3 py-2"
-          />
-          {errors.message && (
-            <div className="text-xs text-red-600 mt-1">{errors.message}</div>
-          )}
-        </div>
+        <FormField
+          label="Message"
+          name="message"
+          value={formData.message}
+          error={errors.message}
+          onChange={handleChange}
+          type="textarea"
+          rows={5}
+        />
 
         <div className="flex items-center justify-between">
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            className="px-4 py-2 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
           >
             {loading ? "Sending..." : "Send"}
           </button>
           {ticket && (
             <div className="flex items-center gap-2">
-              <div className="text-xs text-gray-600 font-mono">{ticket.id}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 font-mono">
+                {ticket.id}
+              </div>
               <button
                 id="copy-ticket-btn"
                 type="button"
@@ -225,7 +205,7 @@ export default function ContactForm() {
                   }
                   setPersistCopyTooltip(true);
                 }}
-                className="relative group px-3 py-1 bg-gray-100 rounded text-sm inline-flex items-center gap-1"
+                className="relative group px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm inline-flex items-center gap-1 transition-colors"
                 aria-label="Copy ticket"
               >
                 <span className="material-symbols-outlined text-sm">
@@ -252,7 +232,7 @@ export default function ContactForm() {
                   }
                   setPersistPrintTooltip(true);
                 }}
-                className="relative group px-3 py-1 bg-gray-100 rounded text-sm inline-flex items-center gap-1"
+                className="relative group px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm inline-flex items-center gap-1 transition-colors"
                 aria-label="Print ticket"
               >
                 <span className="material-symbols-outlined text-sm">print</span>
@@ -276,13 +256,15 @@ export default function ContactForm() {
         <div
           id="contact-ticket"
           tabIndex={-1}
-          className="mt-4 p-4 bg-white dark:bg-gray-900 border rounded"
+          className="mt-4 p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow-sm"
         >
-          <h3 className="font-semibold">Submission summary</h3>
-          <div className="text-xs text-gray-500 mb-2">
+          <h3 className="font-semibold text-gray-800 dark:text-white">
+            Submission summary
+          </h3>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
             {new Date(ticket.timestamp).toLocaleString()}
           </div>
-          <div className="text-sm">
+          <div className="text-sm text-gray-700 dark:text-gray-300">
             <div>
               <strong>Name:</strong> {ticket.data.name}
             </div>
@@ -297,7 +279,7 @@ export default function ContactForm() {
             </div>
           </div>
           {copied && (
-            <div className="text-xs text-green-600 mt-2">
+            <div className="text-xs text-green-600 dark:text-green-400 mt-2">
               Copied to clipboard
             </div>
           )}

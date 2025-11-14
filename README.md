@@ -175,3 +175,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Made with ❤️ using Next.js 16**
+
+## **Custom Agents**
+
+- **Agent manifest**: A Copilot custom-agent manifest has been added at
+   ` .github/agents/devtool.agent.json` which references the prompt at
+   ` .github/prompts/devtool.prompt.md`.
+- **Purpose**: The agent is a helper for automated UI testing using the
+   repository-internal DevTools MCP helpers (take snapshots, screenshots,
+   interact with UI, collect console and network logs) and stores
+   artifacts under `./screenshots/` by default.
+- **How to use**: Import or reference the manifest in your VS Code
+   Copilot Custom Agents UI (or open the file and follow your Copilot
+   extension workflow). Provide a `url` input (for example
+   `https://localhost:3000/contact`) when prompted.
+
+If you want, I can wire a simple script to invoke the agent with a
+default URL or add example commands to `package.json`.

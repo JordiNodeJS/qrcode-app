@@ -18,7 +18,7 @@ const getStoredTheme = (): Theme | null => {
     if (stored === "light" || stored === "dark") {
       return stored;
     }
-  } catch (err) {
+  } catch {
     // Ignore storage access issues (Safari private mode, etc.)
   }
   return null;
@@ -30,7 +30,7 @@ const getSystemTheme = (): Theme => {
     return window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light";
-  } catch (err) {
+  } catch {
     return "light";
   }
 };
@@ -42,7 +42,7 @@ const applyTheme = (nextTheme: Theme) => {
   root.style.colorScheme = nextTheme;
   try {
     window.localStorage.setItem("theme", nextTheme);
-  } catch (err) {
+  } catch {
     // Ignore write failures
   }
 };

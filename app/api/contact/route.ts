@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import {
+  validateEmail,
+  validateLength,
+  safeLog,
+  safeLogError,
+} from "@/lib/utils";
+import { CONTACT_FORM_LIMITS, CONTACT_FORM_ERRORS } from "@/lib/constants";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -17,39 +24,39 @@ interface ResendSendResult {
   [key: string]: unknown;
 }
 
-// Validation functions
-const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
 const validateFormData = (data: ContactFormData): string | null => {
   if (
-    !data.name ||
-    data.name.trim().length < 2 ||
-    data.name.trim().length > 100
+    !validateLength(
+      data.name,
+      CONTACT_FORM_LIMITS.name.min,
+      CONTACT_FORM_LIMITS.name.max
+    )
   ) {
-    return "El nombre debe tener entre 2 y 100 caracteres";
+    return CONTACT_FORM_ERRORS.name;
   }
 
   if (!data.email || !validateEmail(data.email)) {
-    return "Dirección de correo inválida";
+    return CONTACT_FORM_ERRORS.email;
   }
 
   if (
-    !data.subject ||
-    data.subject.trim().length < 5 ||
-    data.subject.trim().length > 200
+    !validateLength(
+      data.subject,
+      CONTACT_FORM_LIMITS.subject.min,
+      CONTACT_FORM_LIMITS.subject.max
+    )
   ) {
-    return "El asunto debe tener entre 5 y 200 caracteres";
+    return CONTACT_FORM_ERRORS.subject;
   }
 
   if (
-    !data.message ||
-    data.message.trim().length < 10 ||
-    data.message.trim().length > 1000
+    !validateLength(
+      data.message,
+      CONTACT_FORM_LIMITS.message.min,
+      CONTACT_FORM_LIMITS.message.max
+    )
   ) {
-    return "El mensaje debe tener entre 10 y 1000 caracteres";
+    return CONTACT_FORM_ERRORS.message;
   }
 
   return null;
@@ -61,14 +68,7 @@ export async function POST(request: NextRequest) {
     const body: ContactFormData = await request.json();
 
     // Log incoming request (useful for debugging). Avoid logging secrets.
-    try {
-      console.log(
-        `[contact] Incoming request at ${new Date().toISOString()}:`,
-        JSON.stringify(body)
-      );
-    } catch (err) {
-      console.log("[contact] Incoming request (non-serializable)", body);
-    }
+    safeLog(`[contact] Incoming request at ${new Date().toISOString()}:`, body);
 
     // Validate form data
     const validationError = validateFormData(body);
@@ -188,16 +188,7 @@ Fecha: ${new Date().toLocaleString()}
       }
     } catch (sendErr) {
       // Log full error object and return a generic error to the client
-      console.error(
-        "[contact] Resend API threw an error:",
-        sendErr instanceof Error ? sendErr.stack || sendErr.message : sendErr
-      );
-      try {
-        // If the error has a response/body, try to log it
-        console.error("[contact] Resend error (raw):", JSON.stringify(sendErr));
-      } catch (err) {
-        // ignore
-      }
+      safeLogError("[contact] Resend API threw an error:", sendErr);
 
       return NextResponse.json(
         { error: "Failed to send email. Please try again later." },
@@ -206,17 +197,7 @@ Fecha: ${new Date().toLocaleString()}
     }
 
     // Log the send result for debugging; this often contains id / status
-    try {
-      console.log(
-        "[contact] Resend send result:",
-        JSON.stringify(sendResult, null, 2)
-      );
-    } catch (err) {
-      console.log(
-        "[contact] Resend send result (non-serializable):",
-        sendResult
-      );
-    }
+    safeLog("[contact] Resend send result:", sendResult);
 
     // If Resend returned an error object, surface a helpful error to the client
     type ResendError = {
