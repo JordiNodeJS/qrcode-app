@@ -42,3 +42,5 @@ next-env.d.ts
 
 # local workspace settings
 settings.json
+
+.vercel
