@@ -1,22 +1,23 @@
 import ContactForm from "@/components/ContactForm";
+import PageLayout from "@/components/PageLayout";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Contact - QR Code Generator",
-  description: "Get in touch with the QR Code Generator team.",
+  title: "Contacto - Generador de códigos QR",
+  description: "Ponte en contacto con el equipo del Generador de códigos QR.",
 };
 
 export default function ContactPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-12">
+    <PageLayout className="py-12">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-            Contact
+            Contacto
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-300">
-            We&rsquo;d love to hear from you — questions, feedback or
-            partnership inquiries are welcome.
+            Nos encantaría saber de ti — preguntas, comentarios o consultas de
+            colaboración son bienvenidas.
           </p>
         </div>
 
@@ -31,6 +32,6 @@ export default function ContactPage() {
           </Link>
         </div>
       </main>
-    </div>
+    </PageLayout>
   );
 }

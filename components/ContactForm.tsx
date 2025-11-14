@@ -1,20 +1,17 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import React, { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { validateEmail, escapeHtml } from "@/lib/utils";
+import { CONTACT_FORM_ERRORS } from "@/lib/constants";
+import FormField from "./FormField";
 
-interface FormData {
+type FormData = {
   name: string;
   email: string;
   subject: string;
   message: string;
-}
-
-interface FormErrors {
-  name?: string;
-  email?: string;
-  subject?: string;
-  message?: string;
-}
+};
+type Ticket = { id: string; timestamp: number; data: FormData };
 
 export default function ContactForm() {
   const [formData, setFormData] = useState<FormData>({
@@ -23,391 +20,271 @@ export default function ContactForm() {
     subject: "",
     message: "",
   });
-
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [errors, setErrors] = useState<Partial<FormData>>({});
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [apiError, setApiError] = useState("");
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [persistCopyTooltip, setPersistCopyTooltip] = useState(false);
+  const [persistPrintTooltip, setPersistPrintTooltip] = useState(false);
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  useEffect(() => {
+    const onDocClick = (ev: MouseEvent) => {
+      const target = ev.target as Node | null;
+      const copyBtn = document.getElementById("copy-ticket-btn");
+      const printBtn = document.getElementById("print-ticket-btn");
+      if (persistCopyTooltip && copyBtn && !copyBtn.contains(target))
+        setPersistCopyTooltip(false);
+      if (persistPrintTooltip && printBtn && !printBtn.contains(target))
+        setPersistPrintTooltip(false);
+    };
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, [persistCopyTooltip, persistPrintTooltip]);
 
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
+  function validateForm(): boolean {
+    const next: Partial<FormData> = {};
+    if (!formData.name.trim()) next.name = CONTACT_FORM_ERRORS.required;
+    if (!formData.email.trim()) next.email = CONTACT_FORM_ERRORS.required;
+    else if (!validateEmail(formData.email))
+      next.email = CONTACT_FORM_ERRORS.invalidEmail;
+    if (!formData.subject.trim()) next.subject = CONTACT_FORM_ERRORS.required;
+    if (!formData.message.trim()) next.message = CONTACT_FORM_ERRORS.required;
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
 
-    if (formData.name.trim().length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
-    } else if (formData.name.trim().length > 100) {
-      newErrors.name = "Name must not exceed 100 characters";
-    }
-
-    if (!validateEmail(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-
-    if (formData.subject.trim().length < 5) {
-      newErrors.subject = "Subject must be at least 5 characters";
-    } else if (formData.subject.trim().length > 200) {
-      newErrors.subject = "Subject must not exceed 200 characters";
-    }
-
-    if (formData.message.trim().length < 10) {
-      newErrors.message = "Message must be at least 10 characters";
-    } else if (formData.message.trim().length > 1000) {
-      newErrors.message = "Message must not exceed 1000 characters";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  function handleChange(
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((s) => ({ ...s, [name]: value }));
+    setErrors((p) => ({ ...p, [name]: undefined }));
+  }
 
-    // Clear error for this field when user starts typing
-    if (errors[name as keyof FormErrors]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
-  };
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setApiError("");
-    setSuccess(false);
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     setLoading(true);
-
     try {
-      const response = await fetch("/api/contact", {
+      const res = await fetch("/api/contact", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to send message");
-      }
-
-      setSuccess(true);
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Server error");
+      const id = json?.id ?? `local-${Date.now()}`;
+      setTicket({ id, timestamp: Date.now(), data: formData });
+      setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (err) {
+      console.error(err);
+      setTicket({
+        id: `error-${Date.now()}`,
+        timestamp: Date.now(),
+        data: formData,
       });
-
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccess(false), 5000);
-    } catch (error) {
-      setApiError(
-        error instanceof Error
-          ? error.message
-          : "Failed to send message. Please try again."
-      );
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  useEffect(() => {
-    if (success) {
-      const el = document.getElementById("contact-success");
-      if (el) {
-        setTimeout(() => {
-          try {
-            (el as HTMLElement).focus();
-          } catch {}
-        }, 50);
+  async function handleCopyTicket() {
+    if (!ticket) return;
+    const text = `Ticket: ${ticket.id}\nDate: ${new Date(
+      ticket.timestamp
+    ).toLocaleString()}\nName: ${ticket.data.name}\nEmail: ${
+      ticket.data.email
+    }\nSubject: ${ticket.data.subject}\nMessage:\n${ticket.data.message}`;
+    try {
+      if (navigator.clipboard?.writeText)
+        await navigator.clipboard.writeText(text);
+      else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
       }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error("copy failed", e);
     }
-  }, [success]);
+    setPersistCopyTooltip(false);
+  }
+
+  function handlePrintTicket() {
+    if (!ticket) return;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Ticket ${escapeHtml(
+      ticket.id
+    )}</title><meta name="viewport" content="width=device-width,initial-scale=1" /><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:20px;color:#111} pre{white-space:pre-wrap}</style></head><body><h1>Submission summary</h1><div><strong>Ticket:</strong> ${escapeHtml(
+      ticket.id
+    )}</div><div><strong>Date:</strong> ${escapeHtml(
+      new Date(ticket.timestamp).toLocaleString()
+    )}</div><div><strong>Name:</strong> ${escapeHtml(
+      ticket.data.name
+    )}</div><div><strong>Email:</strong> ${escapeHtml(
+      ticket.data.email
+    )}</div><div><strong>Subject:</strong> ${escapeHtml(
+      ticket.data.subject
+    )}</div><hr/><pre>${escapeHtml(
+      ticket.data.message
+    )}</pre><script>window.print();</script></body></html>`;
+    const w = window.open("", "_blank", "noopener,noreferrer");
+    if (w) {
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    }
+    setPersistPrintTooltip(false);
+  }
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-      <h2
-        id="contact-heading"
-        className="text-3xl font-bold text-gray-800 dark:text-white mb-6 text-center"
-      >
-        Contact Us
+    <div className="w-full max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+      <h2 className="text-2xl font-semibold mb-4 text-center text-gray-800 dark:text-white">
+        Contact
       </h2>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-6"
-        noValidate
-        aria-labelledby="contact-heading"
-        aria-describedby="contact-instructions"
-      >
-        <p id="contact-instructions" className="sr-only">
-          All fields marked with an asterisk are required. You can expect a
-          reply within 2 business days.
-        </p>
-        <fieldset
-          aria-describedby="contact-instructions"
-          className="space-y-6 border-0 p-0 m-0"
-        >
-          <legend className="sr-only">Contact form</legend>
-          {/* Success Message */}
-          {success && (
-            <div
-              id="contact-success"
-              tabIndex={-1}
-              className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400"
-              role="alert"
-              aria-live="assertive"
-            >
-              ✓ Message sent successfully! We&apos;ll get back to you soon.
-            </div>
-          )}
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <FormField
+          label="Name"
+          name="name"
+          value={formData.name}
+          error={errors.name}
+          onChange={handleChange}
+        />
 
-          {/* API Error Message */}
-          {apiError && (
-            <div
-              className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400"
-              role="alert"
-              aria-live="assertive"
-            >
-              {apiError}
-            </div>
-          )}
+        <FormField
+          label="Email"
+          name="email"
+          value={formData.email}
+          error={errors.email}
+          onChange={handleChange}
+          inputType="email"
+        />
 
-          {/* Name Field */}
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Name{" "}
-              <span aria-hidden className="text-red-500">
-                *
-              </span>
-              <span className="sr-only"> required</span>
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              maxLength={100}
-              autoComplete="name"
-              required
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
-                errors.name
-                  ? "border-red-500"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-              aria-label="Your name"
-              aria-required="true"
-              aria-invalid={!!errors.name}
-              aria-describedby={errors.name ? "name-error" : undefined}
-            />
-            {errors.name && (
-              <p
-                id="name-error"
-                role="alert"
-                aria-live="assertive"
-                className="mt-1 text-sm text-red-600 dark:text-red-400"
-              >
-                {errors.name}
-              </p>
-            )}
-          </div>
+        <FormField
+          label="Subject"
+          name="subject"
+          value={formData.subject}
+          error={errors.subject}
+          onChange={handleChange}
+        />
 
-          {/* Email Field */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Email{" "}
-              <span aria-hidden className="text-red-500">
-                *
-              </span>
-              <span className="sr-only"> required</span>
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              autoComplete="email"
-              required
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
-                errors.email
-                  ? "border-red-500"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-              aria-label="Your email address"
-              aria-required="true"
-              aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? "email-error" : undefined}
-            />
-            {errors.email && (
-              <p
-                id="email-error"
-                role="alert"
-                aria-live="assertive"
-                className="mt-1 text-sm text-red-600 dark:text-red-400"
-              >
-                {errors.email}
-              </p>
-            )}
-          </div>
+        <FormField
+          label="Message"
+          name="message"
+          value={formData.message}
+          error={errors.message}
+          onChange={handleChange}
+          type="textarea"
+          rows={5}
+        />
 
-          {/* Subject Field */}
-          <div>
-            <label
-              htmlFor="subject"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Subject{" "}
-              <span aria-hidden className="text-red-500">
-                *
-              </span>
-              <span className="sr-only"> required</span>
-            </label>
-            <input
-              type="text"
-              id="subject"
-              name="subject"
-              value={formData.subject}
-              onChange={handleChange}
-              maxLength={200}
-              autoComplete="on"
-              required
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
-                errors.subject
-                  ? "border-red-500"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-              aria-label="Email subject"
-              aria-required="true"
-              aria-invalid={!!errors.subject}
-              aria-describedby={errors.subject ? "subject-error" : undefined}
-            />
-            {errors.subject && (
-              <p
-                id="subject-error"
-                role="alert"
-                aria-live="assertive"
-                className="mt-1 text-sm text-red-600 dark:text-red-400"
-              >
-                {errors.subject}
-              </p>
-            )}
-          </div>
-
-          {/* Message Field */}
-          <div>
-            <label
-              htmlFor="message"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Message{" "}
-              <span aria-hidden className="text-red-500">
-                *
-              </span>
-              <span className="sr-only"> required</span>
-            </label>
-            <textarea
-              id="message"
-              name="message"
-              rows={6}
-              value={formData.message}
-              onChange={handleChange}
-              maxLength={1000}
-              autoComplete="off"
-              required
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-none text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 ${
-                errors.message
-                  ? "border-red-500"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-              aria-label="Your message"
-              aria-required="true"
-              aria-invalid={!!errors.message}
-              aria-describedby={
-                errors.message
-                  ? "message-error message-counter"
-                  : "message-counter"
-              }
-            />
-            <div className="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
-              <span id="message-counter" aria-live="polite">
-                {formData.message.length} / 1000 characters
-              </span>
-            </div>
-            {errors.message && (
-              <p
-                id="message-error"
-                role="alert"
-                aria-live="assertive"
-                className="mt-1 text-sm text-red-600 dark:text-red-400"
-              >
-                {errors.message}
-              </p>
-            )}
-          </div>
-
-          {/* Submit Button */}
+        <div className="flex items-center justify-between">
           <button
             type="submit"
+            className="px-4 py-2 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
-            className="w-full px-6 py-3 bg-sky-600 dark:bg-sky-500 text-white font-semibold rounded-lg hover:bg-sky-700 dark:hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            aria-disabled={loading}
           >
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Sending...
-              </span>
-            ) : (
-              <span className="inline-flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined">send</span>
-                <span>Send Message</span>
-              </span>
-            )}
+            {loading ? "Sending..." : "Send"}
           </button>
-
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-            <span aria-hidden>*</span> Required fields
-          </p>
-        </fieldset>
+          {ticket && (
+            <div className="flex items-center gap-2">
+              <div className="text-xs text-gray-600 dark:text-gray-400 font-mono">
+                {ticket.id}
+              </div>
+              <button
+                id="copy-ticket-btn"
+                type="button"
+                onClick={() => {
+                  if (persistCopyTooltip) {
+                    handleCopyTicket();
+                    return;
+                  }
+                  setPersistCopyTooltip(true);
+                }}
+                className="relative group px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm inline-flex items-center gap-1 transition-colors"
+                aria-label="Copy ticket"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  content_copy
+                </span>
+                <span>Copy</span>
+                <span
+                  className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 rounded bg-gray-800 text-white text-xs px-2 py-1 transition-all ${
+                    persistCopyTooltip
+                      ? "opacity-100 scale-100"
+                      : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100"
+                  }`}
+                >
+                  Copy ticket
+                </span>
+              </button>
+              <button
+                id="print-ticket-btn"
+                type="button"
+                onClick={() => {
+                  if (persistPrintTooltip) {
+                    handlePrintTicket();
+                    return;
+                  }
+                  setPersistPrintTooltip(true);
+                }}
+                className="relative group px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm inline-flex items-center gap-1 transition-colors"
+                aria-label="Print ticket"
+              >
+                <span className="material-symbols-outlined text-sm">print</span>
+                <span>Print</span>
+                <span
+                  className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 rounded bg-gray-800 text-white text-xs px-2 py-1 transition-all ${
+                    persistPrintTooltip
+                      ? "opacity-100 scale-100"
+                      : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100"
+                  }`}
+                >
+                  Print ticket
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
       </form>
+
+      {ticket && (
+        <div
+          id="contact-ticket"
+          tabIndex={-1}
+          className="mt-4 p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow-sm"
+        >
+          <h3 className="font-semibold text-gray-800 dark:text-white">
+            Submission summary
+          </h3>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            {new Date(ticket.timestamp).toLocaleString()}
+          </div>
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            <div>
+              <strong>Name:</strong> {ticket.data.name}
+            </div>
+            <div>
+              <strong>Email:</strong> {ticket.data.email}
+            </div>
+            <div>
+              <strong>Subject:</strong> {ticket.data.subject}
+            </div>
+            <div className="mt-2 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800 p-2 rounded text-sm">
+              {ticket.data.message}
+            </div>
+          </div>
+          {copied && (
+            <div className="text-xs text-green-600 dark:text-green-400 mt-2">
+              Copied to clipboard
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

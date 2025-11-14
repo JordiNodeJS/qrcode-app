@@ -3,11 +3,18 @@
 import { useState, useEffect, useRef } from "react";
 import QRCode from "qrcode";
 import Image from "next/image";
+import {
+  QR_CODE_MAX_LENGTH,
+  QR_CODE_DEFAULT_WIDTH,
+  QR_CODE_MIN_WIDTH,
+  QR_CODE_MAX_WIDTH,
+  QR_CODE_RESIZE_DEBOUNCE_MS,
+} from "@/lib/constants";
 
 export default function QRGenerator() {
   const [text, setText] = useState("");
   const [qrCodeUrl, setQrCodeUrl] = useState("");
-  const [qrWidth, setQrWidth] = useState<number>(300);
+  const [qrWidth, setQrWidth] = useState<number>(QR_CODE_DEFAULT_WIDTH);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const resizeTimeout = useRef<number | null>(null);
@@ -24,12 +31,15 @@ export default function QRGenerator() {
   useEffect(() => {
     function updateWidth() {
       try {
-        const vw = Math.max(120, Math.floor(window.innerWidth * 0.8));
+        const vw = Math.max(
+          QR_CODE_MIN_WIDTH,
+          Math.floor(window.innerWidth * 0.8)
+        );
         // Cap the generated QR size for performance
-        const size = Math.min(600, vw);
+        const size = Math.min(QR_CODE_MAX_WIDTH, vw);
         setQrWidth(size);
-      } catch (e) {
-        setQrWidth(300);
+      } catch {
+        setQrWidth(QR_CODE_DEFAULT_WIDTH);
       }
     }
 
@@ -42,7 +52,7 @@ export default function QRGenerator() {
       // Debounce resize events
       resizeTimeout.current = window.setTimeout(() => {
         updateWidth();
-      }, 150);
+      }, QR_CODE_RESIZE_DEBOUNCE_MS);
     }
 
     window.addEventListener("resize", onResize);
@@ -61,8 +71,8 @@ export default function QRGenerator() {
       return;
     }
 
-    if (value.length > 2000) {
-      setError("Text is too long. Maximum 2000 characters.");
+    if (value.length > QR_CODE_MAX_LENGTH) {
+      setError(`Text is too long. Maximum ${QR_CODE_MAX_LENGTH} characters.`);
       return;
     }
 
@@ -118,7 +128,7 @@ export default function QRGenerator() {
           <textarea
             id="qr-text"
             rows={4}
-            maxLength={2000}
+            maxLength={QR_CODE_MAX_LENGTH}
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Enter text, URL, or any content to generate QR code..."
@@ -126,7 +136,9 @@ export default function QRGenerator() {
             aria-label="Text input for QR code generation"
           />
           <div className="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
-            <span>{text.length} / 2000 characters</span>
+            <span>
+              {text.length} / {QR_CODE_MAX_LENGTH} characters
+            </span>
             {text && (
               <button
                 onClick={() => setText("")}

@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import {
+  validateEmail,
+  validateLength,
+  safeLog,
+  safeLogError,
+} from "@/lib/utils";
+import { CONTACT_FORM_LIMITS, CONTACT_FORM_ERRORS } from "@/lib/constants";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -17,39 +24,39 @@ interface ResendSendResult {
   [key: string]: unknown;
 }
 
-// Validation functions
-const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
 const validateFormData = (data: ContactFormData): string | null => {
   if (
-    !data.name ||
-    data.name.trim().length < 2 ||
-    data.name.trim().length > 100
+    !validateLength(
+      data.name,
+      CONTACT_FORM_LIMITS.name.min,
+      CONTACT_FORM_LIMITS.name.max
+    )
   ) {
-    return "Name must be between 2 and 100 characters";
+    return CONTACT_FORM_ERRORS.name;
   }
 
   if (!data.email || !validateEmail(data.email)) {
-    return "Invalid email address";
+    return CONTACT_FORM_ERRORS.email;
   }
 
   if (
-    !data.subject ||
-    data.subject.trim().length < 5 ||
-    data.subject.trim().length > 200
+    !validateLength(
+      data.subject,
+      CONTACT_FORM_LIMITS.subject.min,
+      CONTACT_FORM_LIMITS.subject.max
+    )
   ) {
-    return "Subject must be between 5 and 200 characters";
+    return CONTACT_FORM_ERRORS.subject;
   }
 
   if (
-    !data.message ||
-    data.message.trim().length < 10 ||
-    data.message.trim().length > 1000
+    !validateLength(
+      data.message,
+      CONTACT_FORM_LIMITS.message.min,
+      CONTACT_FORM_LIMITS.message.max
+    )
   ) {
-    return "Message must be between 10 and 1000 characters";
+    return CONTACT_FORM_ERRORS.message;
   }
 
   return null;
@@ -61,14 +68,7 @@ export async function POST(request: NextRequest) {
     const body: ContactFormData = await request.json();
 
     // Log incoming request (useful for debugging). Avoid logging secrets.
-    try {
-      console.log(
-        `[contact] Incoming request at ${new Date().toISOString()}:`,
-        JSON.stringify(body)
-      );
-    } catch {
-      console.log("[contact] Incoming request (non-serializable)", body);
-    }
+    safeLog(`[contact] Incoming request at ${new Date().toISOString()}:`, body);
 
     // Validate form data
     const validationError = validateFormData(body);
@@ -77,12 +77,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if API key is configured (don't print the key itself)
+    let useMockSend = false;
     if (!process.env.RESEND_API_KEY) {
-      console.error("[contact] RESEND_API_KEY is not configured");
-      return NextResponse.json(
-        { error: "Email service is not configured" },
-        { status: 500 }
-      );
+      if (process.env.NODE_ENV === "development") {
+        // Allow a local mock when developing so front-end behavior can be tested
+        useMockSend = true;
+        console.log(
+          "[contact] RESEND_API_KEY not configured: using mock send in development"
+        );
+      } else {
+        console.error("[contact] RESEND_API_KEY is not configured");
+        return NextResponse.json(
+          { error: "Email service is not configured" },
+          { status: 500 }
+        );
+      }
     } else {
       console.log("[contact] RESEND_API_KEY is configured: YES");
     }
@@ -90,18 +99,26 @@ export async function POST(request: NextRequest) {
     // Send email using Resend. Wrap in try/catch and log full details for debugging.
     let sendResult: ResendSendResult | null = null;
     try {
-      // Allow overriding from/to via environment for testing/production
-      const mailFrom =
-        process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
-      const mailTo = process.env.RESEND_TO_EMAIL
-        ? process.env.RESEND_TO_EMAIL.split(",").map((s) => s.trim())
-        : ["info@webcode.es"];
+      if (useMockSend) {
+        // Create a fake send result for development testing
+        sendResult = {
+          id: `local-${Date.now()}`,
+          data: { id: `local-${Date.now()}` },
+        };
+        console.log("[contact] Mock send result:", sendResult);
+      } else {
+        // Allow overriding from/to via environment for testing/production
+        const mailFrom =
+          process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+        const mailTo = process.env.RESEND_TO_EMAIL
+          ? process.env.RESEND_TO_EMAIL.split(",").map((s) => s.trim())
+          : ["info@webcode.es"];
 
-      sendResult = await resend.emails.send({
-        from: mailFrom,
-        to: mailTo,
-        subject: `Contact Form: ${body.subject}`,
-        html: `
+        sendResult = await resend.emails.send({
+          from: mailFrom,
+          to: mailTo,
+          subject: `Formulario de contacto: ${body.subject}`,
+          html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -120,25 +137,25 @@ export async function POST(request: NextRequest) {
           <body>
             <div class="container">
               <div class="header">
-                <h2 style="margin: 0;">New Contact Form Submission</h2>
+                <h2 style="margin: 0;">Nueva solicitud de contacto</h2>
               </div>
               <div class="content">
                 <div class="field">
-                  <div class="field-label">From:</div>
+                  <div class="field-label">De:</div>
                   <div class="field-value">${body.name}</div>
                 </div>
                 <div class="field">
-                  <div class="field-label">Email:</div>
+                  <div class="field-label">Correo:</div>
                   <div class="field-value"><a href="mailto:${body.email}">${
-          body.email
-        }</a></div>
+            body.email
+          }</a></div>
                 </div>
                 <div class="field">
-                  <div class="field-label">Subject:</div>
+                  <div class="field-label">Asunto:</div>
                   <div class="field-value">${body.subject}</div>
                 </div>
                 <div class="field">
-                  <div class="field-label">Message:</div>
+                  <div class="field-label">Mensaje:</div>
                   <div class="field-value">${body.message.replace(
                     /\n/g,
                     "<br>"
@@ -146,40 +163,32 @@ export async function POST(request: NextRequest) {
                 </div>
               </div>
               <div class="footer">
-                <p>This email was sent from the QR Code Generator contact form</p>
-                <p>Timestamp: ${new Date().toLocaleString()}</p>
+                <p>Este correo fue enviado desde el formulario de contacto del Generador de códigos QR</p>
+                <p>Fecha: ${new Date().toLocaleString()}</p>
               </div>
             </div>
           </body>
         </html>
       `,
-        text: `
-New Contact Form Submission
+          text: `
+Nueva solicitud de contacto
 
-From: ${body.name}
-Email: ${body.email}
-Subject: ${body.subject}
+De: ${body.name}
+Correo: ${body.email}
+Asunto: ${body.subject}
 
-Message:
+Mensaje:
 ${body.message}
 
 ---
-Sent from QR Code Generator
-Timestamp: ${new Date().toLocaleString()}
+Enviado desde Generador de códigos QR
+Fecha: ${new Date().toLocaleString()}
       `.trim(),
-      });
+        });
+      }
     } catch (sendErr) {
       // Log full error object and return a generic error to the client
-      console.error(
-        "[contact] Resend API threw an error:",
-        sendErr instanceof Error ? sendErr.stack || sendErr.message : sendErr
-      );
-      try {
-        // If the error has a response/body, try to log it
-        console.error("[contact] Resend error (raw):", JSON.stringify(sendErr));
-      } catch {
-        // ignore
-      }
+      safeLogError("[contact] Resend API threw an error:", sendErr);
 
       return NextResponse.json(
         { error: "Failed to send email. Please try again later." },
@@ -188,17 +197,7 @@ Timestamp: ${new Date().toLocaleString()}
     }
 
     // Log the send result for debugging; this often contains id / status
-    try {
-      console.log(
-        "[contact] Resend send result:",
-        JSON.stringify(sendResult, null, 2)
-      );
-    } catch {
-      console.log(
-        "[contact] Resend send result (non-serializable):",
-        sendResult
-      );
-    }
+    safeLog("[contact] Resend send result:", sendResult);
 
     // If Resend returned an error object, surface a helpful error to the client
     type ResendError = {
@@ -226,7 +225,7 @@ Timestamp: ${new Date().toLocaleString()}
     return NextResponse.json(
       {
         success: true,
-        message: "Email sent successfully",
+        message: "Correo enviado con éxito",
         id: sendResult?.id ?? sendResult?.data?.id ?? null,
       },
       { status: 200 }
@@ -234,7 +233,7 @@ Timestamp: ${new Date().toLocaleString()}
   } catch (error) {
     console.error("Contact form error:", error);
     return NextResponse.json(
-      { error: "An unexpected error occurred. Please try again." },
+      { error: "Ocurrió un error inesperado. Por favor, inténtalo de nuevo." },
       { status: 500 }
     );
   }
