@@ -1,10 +1,10 @@
 # GitHub Copilot Coding Instructions
 
 ## Project Overview
-This is a Next.js 15 QR code generator application with integrated contact form functionality using Resend API. The project uses the App Router architecture, TypeScript, and modern React patterns including Server Components and Client Components.
+This is a Next.js 16 QR code generator application with integrated contact form functionality using Resend API. The project uses the App Router architecture, TypeScript, and modern React patterns including Server Components and Client Components.
 
 ## Tech Stack
-- **Framework**: Next.js 15 with App Router
+- **Framework**: Next.js 16 with App Router
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **Email Service**: Resend API

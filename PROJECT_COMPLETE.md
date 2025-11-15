@@ -2,7 +2,7 @@
 
 ## Summary
 
-Successfully created a complete Next.js 15 QR Code Generator application with integrated contact form functionality using Resend API.
+Successfully created a complete Next.js 16 QR Code Generator application with integrated contact form functionality using Resend API.
 
 ## What Was Created
 
@@ -163,6 +163,6 @@ The application is fully functional and ready for use. All features are working 
 
 ---
 
-**Built with**: Next.js 15, TypeScript, Tailwind CSS, Resend API  
+**Built with**: Next.js 16, TypeScript, Tailwind CSS, Resend API  
 **Status**: ✅ Complete and Running  
 **Server**: http://localhost:3001

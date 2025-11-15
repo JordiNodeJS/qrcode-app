@@ -12,7 +12,7 @@ This document tracks all tasks for the QR Code Generator project. Tasks are orga
 ## ✅ Phase 1: Project Setup & Documentation
 
 ### Setup Tasks
-- [x] Initialize Next.js 15 project with TypeScript
+- [x] Initialize Next.js 16 project with TypeScript
 - [x] Configure Tailwind CSS
 - [x] Set up project structure
 - [ ] Install required dependencies (qrcode, resend)
@@ -238,7 +238,7 @@ This document tracks all tasks for the QR Code Generator project. Tasks are orga
 - Keep components small and focused
 - Use TypeScript strictly (no `any` types)
 - Implement proper error boundaries
-- Follow Next.js 15 best practices
+	- Follow Next.js 16 best practices
 - Prioritize accessibility
 
 ---

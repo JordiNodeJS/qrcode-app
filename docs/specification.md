@@ -2,13 +2,13 @@
 
 ## Project Overview
 
-A modern, user-friendly web application built with Next.js 15 that allows users to generate QR codes from text input and includes a contact form for inquiries. The application leverages Server Components for optimal performance and integrates with Resend API for email functionality.
+A modern, user-friendly web application built with Next.js 16 that allows users to generate QR codes from text input and includes a contact form for inquiries. The application leverages Server Components for optimal performance and integrates with Resend API for email functionality.
 
 ## Project Goals
 
 1. **Primary Goal**: Provide a simple, fast QR code generation tool accessible from any device
 2. **Secondary Goal**: Enable users to contact the team through an integrated contact form
-3. **Technical Goal**: Demonstrate modern Next.js 15 best practices with App Router architecture
+3. **Technical Goal**: Demonstrate modern Next.js 16 best practices with App Router architecture
 
 ## Target Audience
 
@@ -20,7 +20,7 @@ A modern, user-friendly web application built with Next.js 15 that allows users 
 ## Technical Stack
 
 ### Frontend
-- **Framework**: Next.js 15.0+
+- **Framework**: Next.js 16.0+
 - **Language**: TypeScript 5.0+
 - **Styling**: Tailwind CSS 3.0+
 - **UI Library**: React 19

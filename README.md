@@ -1,8 +1,8 @@
 # QR Code Generator with Contact Form
 
-A modern, responsive web application built with Next.js 15 that allows users to generate QR codes from text and includes an integrated contact form powered by Resend API.
+[A modern, responsive web application built with Next.js 16 that allows users to generate QR codes from text and includes an integrated contact form powered by Resend API.
 
-[![Next.js](https://img.shields.io/badge/Next.js-15.0-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.0-38bdf8?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
@@ -13,7 +13,7 @@ A modern, responsive web application built with Next.js 15 that allows users to 
 - 📥 **Download Functionality**: Save generated QR codes as PNG images
 - 📧 **Contact Form**: Integrated email contact form using Resend API
 - 📱 **Responsive Design**: Works seamlessly on mobile, tablet, and desktop
-- ⚡ **Fast Performance**: Built with Next.js 15 App Router and Server Components
+- ⚡ **Fast Performance**: Built with Next.js 16 App Router and Server Components
 - 🎨 **Modern UI**: Clean interface built with Tailwind CSS
 - ♿ **Accessible**: WCAG 2.1 Level AA compliant
 

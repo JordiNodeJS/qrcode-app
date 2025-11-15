@@ -61,7 +61,7 @@ export default function Home() {
               reserved.
             </p>
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-              Built with Next.js 15 and ❤️
+              Built with Next.js 16 and ❤️
             </p>
           </div>
         </div>
